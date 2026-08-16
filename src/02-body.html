@@ -1,0 +1,154 @@
+<body>
+<div id="bg"></div>
+<div id="app">
+
+  <aside class="rail">
+    <div class="logo outline">BARON</div>
+
+    <div class="panel" style="padding:9px">
+      <div class="scorebox">
+        <div class="lbl" id="scoreLbl">TODAY'S SCORE</div>
+        <div class="val outline"><span id="scoreVal">0</span><span style="font-size:20px;opacity:.4">/100</span></div>
+        <div class="meter" id="meter"><i></i></div>
+        <div style="font-size:10.5px;font-weight:800;opacity:.55;margin-top:7px" id="scoreSub">nothing graded yet</div>
+      </div>
+    </div>
+
+    <div class="statgrid">
+      <div class="stat"><div class="k">GRADED</div><div class="v" id="stBlocks">0/0</div></div>
+      <div class="stat"><div class="k">BOOKED</div><div class="v" id="stBooked">0h</div></div>
+      <div class="stat rank"><div class="k">RANK</div><div class="v" id="stRank">0</div></div>
+      <div class="stat cash"><div class="k">GOLD</div><div class="v" id="stGold">0</div></div>
+      <div class="stat hot"><div class="k">STREAK</div><div class="v" id="stStreak">0</div></div>
+      <div class="stat cash"><div class="k">BEST</div><div class="v" id="stBest">0</div></div>
+    </div>
+
+    <div class="railbtns">
+      <button class="btn blue" id="btnRecap">RECAP TODAY</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <nav class="tabs">
+      <button class="tab on" data-view="day">TODAY</button>
+      <button class="tab" data-view="cal">CALENDAR</button>
+      <button class="tab" data-view="tasks">TASKS</button>
+      <button class="tab" data-view="stats">STATS</button>
+      <div class="spacer"></div>
+      <button class="btn icon" id="btnHelp" title="How it works">?</button>
+      <button class="btn icon" id="btnSound" title="Sound">♪</button>
+      <button class="btn icon" id="btnMenu" title="Menu">☰</button>
+    </nav>
+
+    <section class="view" id="viewDay">
+      <div class="toolbar">
+        <div class="datenav">
+          <button class="navbtn" id="dPrev">‹</button>
+          <div class="d outline" id="dLabel">TODAY<span>—</span></div>
+          <button class="navbtn" id="dNext">›</button>
+        </div>
+        <button class="btn sm blue" id="btnQuick">+ BLOCK</button>
+        <button class="btn sm" id="btnTemplates">TEMPLATES</button>
+        <div class="spacer"></div>
+        <button class="btn gold" id="btnGrade" hidden>⚑ GRADE 0</button>
+        <div class="segwrap">
+          <button class="seg on" data-dv="timeline">TIMELINE</button>
+          <button class="seg" data-dv="list">LIST</button>
+        </div>
+      </div>
+      <div class="gridwrap" id="gridwrap"><div class="grid" id="grid"></div></div>
+      <div class="listwrap" id="listwrap" hidden><div class="list" id="list"></div></div>
+    </section>
+
+    <section class="view" id="viewCal" hidden>
+      <div class="calhead">
+        <button class="navbtn" id="mPrev">‹</button>
+        <div class="m outline" id="mLabel">MONTH</div>
+        <button class="navbtn" id="mNext">›</button>
+        <button class="btn sm gold" id="btnNewEvt">+ NEW EVENT</button>
+        <div class="spacer"></div>
+        <button class="btn sm" id="btnMToday">THIS MONTH</button>
+      </div>
+      <div class="calwrap">
+        <div class="dow"><div>SUN</div><div>MON</div><div>TUE</div><div>WED</div><div>THU</div><div>FRI</div><div>SAT</div></div>
+        <div class="calgrid" id="calgrid"></div>
+        <div class="agenda" id="agenda"></div>
+      </div>
+    </section>
+
+    <section class="view" id="viewTasks" hidden>
+      <div class="toolbar">
+        <div class="segwrap" id="tkVisSeg">
+          <button class="seg on" data-tv="visible">VISIBLE</button>
+          <button class="seg" data-tv="hidden">HIDDEN</button>
+          <button class="seg" data-tv="all">ALL</button>
+        </div>
+        <div class="segwrap" id="tkSortSeg">
+          <button class="seg on" data-ts="new">NEWEST</button>
+          <button class="seg" data-ts="az">A–Z</button>
+          <button class="seg" data-ts="freq">FREQUENCY</button>
+        </div>
+        <div class="spacer"></div>
+      </div>
+      <div class="tkwrap">
+        <div class="tkadd">
+          <input class="inp" id="tkNew" placeholder="New task — e.g. Deep work">
+          <button class="btn green" id="tkAdd" style="flex:0 0 auto">+ ADD TASK</button>
+        </div>
+        <div class="tkhdr" id="tkHdr"><span>TASK</span><span>HOURS  ·  BLOCKS</span></div>
+        <div class="tklist" id="tklist"></div>
+      </div>
+    </section>
+
+    <section class="view" id="viewStats" hidden>
+      <div class="toolbar">
+        <div class="segwrap" id="rangeSeg">
+          <button class="seg" data-r="14">14D</button>
+          <button class="seg on" data-r="30">30D</button>
+          <button class="seg" data-r="90">90D</button>
+          <button class="seg" data-r="0">ALL</button>
+        </div>
+        <div class="segwrap" id="metricSeg">
+          <button class="seg on" data-m="score">SCORE</button>
+          <button class="seg" data-m="rank">RANK</button>
+          <button class="seg" data-m="gold">GOLD</button>
+        </div>
+        <div class="spacer"></div>
+        <button class="btn sm" id="btnTable">TABLE VIEW</button>
+      </div>
+      <div class="statswrap">
+        <div class="panel chartpanel">
+          <div class="charthdr">
+            <h2 id="chartTitle">DAY SCORE</h2>
+            <div class="sub" id="chartSub">—</div>
+            <div class="chartlegend">
+              <span><i id="legendMain" style="background:#0093ff"></i><span id="legendMainTxt">DAY SCORE</span></span>
+              <span><i style="background:#8fa0a8"></i>7-DAY AVERAGE</span>
+            </div>
+          </div>
+          <div class="chartbox" id="chartbox">
+            <div id="chart"></div>
+            <div class="ctip" id="ctip" hidden></div>
+          </div>
+        </div>
+        <div class="scards" id="scards"></div>
+        <div class="panel" id="taskPanel">
+          <div class="panlbl">HOURS OF TASK</div>
+          <div class="bars" id="taskBars"></div>
+        </div>
+        <div class="panel" id="catPanel">
+          <div class="panlbl">HOURS BY GRADE</div>
+          <div class="bars" id="catBars"></div>
+        </div>
+        <div class="panel" id="tablePanel" hidden>
+          <div class="panlbl">EVERY DAY IN RANGE</div>
+          <table class="stable" id="stable"></table>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="scrim" id="scrim" hidden><div class="modal" id="modal"></div></div>
+<div id="fx" hidden></div>
+<div class="parts" id="parts"></div>

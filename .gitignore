@@ -1,0 +1,23 @@
+# ─── your planner data ───────────────────────────────────────────
+# Baron keeps everything in browser storage. These are the files
+# produced by "SAVE TO DISK" and "EXPORT .JSON" — they are personal
+# and never belong in the repo. Keep your live save outside this folder.
+baron-save.json
+baron-*.json
+*.save.json
+save.json
+
+# ─── OS / editor noise ───────────────────────────────────────────
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*~
+
+# ─── scratch ─────────────────────────────────────────────────────
+_to_delete/
+node_modules/
