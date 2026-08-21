@@ -26,14 +26,22 @@
     <div class="railbtns">
       <button class="btn blue" id="btnRecap">RECAP TODAY</button>
     </div>
+
+    <div class="panel agendapanel">
+      <div class="panlbl">UPCOMING</div>
+      <div class="agenda" id="agenda"></div>
+      <div class="panlbl railq">QUOTAS</div>
+      <div id="railQuotas"></div>
+    </div>
   </aside>
 
   <main class="main">
     <nav class="tabs">
-      <button class="tab on" data-view="day">TODAY</button>
-      <button class="tab" data-view="cal">CALENDAR</button>
+      <button class="tab on" data-view="day">DAILY</button>
+      <button class="tab" data-view="week">QUOTAS</button>
       <button class="tab" data-view="tasks">TASKS</button>
-      <button class="tab" data-view="stats">STATS</button>
+      <button class="tab" data-view="cal">CALENDAR</button>
+      <button class="tab" data-view="stats" hidden>STATS</button>
       <div class="spacer"></div>
       <button class="btn icon" id="btnHelp" title="How it works">?</button>
       <button class="btn icon" id="btnSound" title="Sound">♪</button>
@@ -48,23 +56,45 @@
           <button class="navbtn" id="dNext">›</button>
         </div>
         <button class="btn sm blue" id="btnQuick">+ BLOCK</button>
-        <button class="btn sm" id="btnTemplates">TEMPLATES</button>
+        <button class="btn sm" id="btnAutofill">AUTOFILL</button>
         <div class="spacer"></div>
         <button class="btn gold" id="btnGrade" hidden>⚑ GRADE 0</button>
-        <div class="segwrap">
-          <button class="seg on" data-dv="timeline">TIMELINE</button>
-          <button class="seg" data-dv="list">LIST</button>
+        <button class="btn sm" id="btnToday">TODAY</button>
+      </div>
+      <div class="daybody">
+        <div class="daymain">
+          <div class="gridwrap" id="gridwrap"><div class="grid" id="grid"></div></div>
+        </div>
+        <div class="dayinfo panel">
+          <div class="dnstat top"><div class="dnlbl">TODAY</div><div class="dnlist" id="dnTodayList"></div></div>
+          <div class="dnstat bottom"><div class="dnlbl">WEEK</div><div class="dnlist" id="dnWeekList"></div></div>
         </div>
       </div>
-      <div class="gridwrap" id="gridwrap"><div class="grid" id="grid"></div></div>
-      <div class="listwrap" id="listwrap" hidden><div class="list" id="list"></div></div>
+    </section>
+
+    <section class="view" id="viewWeek" hidden>
+      <div class="toolbar">
+        <div class="datenav" id="quotaNav">
+          <button class="navbtn" id="qPrev">‹</button>
+          <div class="d outline" id="qLabel">DATE – DATE</div>
+          <button class="navbtn" id="qNext">›</button>
+        </div>
+        <button class="btn sm gold" id="btnNewQuota">+ QUOTA</button>
+        <div class="spacer"></div>
+        <button class="btn sm" id="btnQThis">THIS WEEK</button>
+      </div>
+      <div class="listwrap">
+        <div class="list" id="quotaList"></div>
+      </div>
     </section>
 
     <section class="view" id="viewCal" hidden>
       <div class="calhead">
-        <button class="navbtn" id="mPrev">‹</button>
-        <div class="m outline" id="mLabel">MONTH</div>
-        <button class="navbtn" id="mNext">›</button>
+        <div class="datenav" id="monthNav">
+          <button class="navbtn" id="mPrev">‹</button>
+          <div class="d outline" id="mLabel">MONTH</div>
+          <button class="navbtn" id="mNext">›</button>
+        </div>
         <button class="btn sm gold" id="btnNewEvt">+ NEW EVENT</button>
         <div class="spacer"></div>
         <button class="btn sm" id="btnMToday">THIS MONTH</button>
@@ -72,7 +102,6 @@
       <div class="calwrap">
         <div class="dow"><div>SUN</div><div>MON</div><div>TUE</div><div>WED</div><div>THU</div><div>FRI</div><div>SAT</div></div>
         <div class="calgrid" id="calgrid"></div>
-        <div class="agenda" id="agenda"></div>
       </div>
     </section>
 
@@ -80,12 +109,10 @@
       <div class="toolbar">
         <div class="segwrap" id="tkVisSeg">
           <button class="seg on" data-tv="visible">VISIBLE</button>
-          <button class="seg" data-tv="hidden">HIDDEN</button>
           <button class="seg" data-tv="all">ALL</button>
         </div>
         <div class="segwrap" id="tkSortSeg">
-          <button class="seg on" data-ts="new">NEWEST</button>
-          <button class="seg" data-ts="az">A–Z</button>
+          <button class="seg on" data-ts="az">A–Z</button>
           <button class="seg" data-ts="freq">FREQUENCY</button>
         </div>
         <div class="spacer"></div>
@@ -133,7 +160,7 @@
         </div>
         <div class="scards" id="scards"></div>
         <div class="panel" id="taskPanel">
-          <div class="panlbl">HOURS OF TASK</div>
+          <div class="panlbl">HOURS OF TASK  ·  TIME THAT COUNTED</div>
           <div class="bars" id="taskBars"></div>
         </div>
         <div class="panel" id="catPanel">

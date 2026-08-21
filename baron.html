@@ -77,13 +77,13 @@ button{font-family:inherit}
 
 /* ============ layout ============ */
 #app{position:relative;height:100vh;height:100dvh;display:flex;gap:12px;padding:12px;overflow:hidden}
-.rail{width:266px;flex:0 0 266px;display:flex;flex-direction:column;gap:9px;overflow-y:auto;padding-bottom:4px}
+.rail{width:266px;flex:0 0 266px;display:flex;flex-direction:column;gap:7px;overflow-y:auto;padding-bottom:2px}
 .rail::-webkit-scrollbar{width:8px}
 .main{flex:1;min-width:0;display:flex;flex-direction:column;gap:9px}
 
 .logo{
   font-family:var(--f-disp); font-size:27px; line-height:1; text-align:center;
-  padding:13px 6px 12px; letter-spacing:1px;
+  padding:10px 6px 9px; letter-spacing:1px;
   background:linear-gradient(#e33c33,#b8241d); border:3px solid var(--ink); border-radius:12px;
   box-shadow:0 5px 0 rgba(0,0,0,.45), inset 0 2px 0 rgba(255,255,255,.25);
 }
@@ -121,6 +121,24 @@ button{font-family:inherit}
 .railbtns .row2{display:grid;grid-template-columns:1fr 1fr;gap:7px}
 .hint{font-size:10.5px;line-height:1.45;opacity:.55;padding:0 3px}
 
+/* sealed past days: visibly a record, not a workspace */
+.blk.locked,.lrow.locked{cursor:default;opacity:.92}
+.blk.locked:hover{transform:none;box-shadow:0 3px 0 rgba(0,0,0,.5);filter:none}
+.lrow.locked:hover{transform:none;box-shadow:0 4px 0 rgba(0,0,0,.45)}
+.grid.sealed .lines{opacity:.5}
+
+/* the 10-minute heads-up */
+.alert{
+  position:fixed;right:16px;bottom:16px;z-index:95;width:300px;
+  background:var(--panel);border:4px solid var(--ink);border-radius:14px;padding:12px 14px;
+  box-shadow:0 8px 0 rgba(0,0,0,.5);animation:alertin .3s cubic-bezier(.2,1.6,.4,1);cursor:pointer;
+}
+.alert .k{font-family:var(--f-disp);font-size:15px;color:var(--gold);letter-spacing:.5px}
+.alert .t{font-weight:900;font-size:17px;margin-top:3px;line-height:1.2}
+.alert .w{font-size:11.5px;font-weight:800;opacity:.6;margin-top:3px}
+.alert .x{position:absolute;top:6px;right:8px;font-size:13px;opacity:.5}
+@keyframes alertin{from{transform:translateY(24px) scale(.9);opacity:0}to{transform:none;opacity:1}}
+
 /* tabs */
 .tabs{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 .tab{
@@ -131,9 +149,9 @@ button{font-family:inherit}
 .tab:active{top:4px;box-shadow:0 0 0}
 .spacer{flex:1}
 .datenav{display:flex;align-items:center;gap:6px;background:var(--panel);border:3px solid var(--ink);border-radius:11px;padding:3px 5px;box-shadow:0 4px 0 rgba(0,0,0,.45)}
-.datenav .d{font-family:var(--f-disp);font-size:16px;min-width:0;flex:1;text-align:center;cursor:pointer;overflow:hidden}
-.datenav .d span{display:block;font-family:var(--f-ui);font-size:9px;font-weight:900;letter-spacing:2px;opacity:.6;margin-top:-2px}
-.navbtn{width:28px;height:28px;border:2px solid var(--ink);border-radius:8px;background:var(--panel3);color:#fff;cursor:pointer;font-size:14px;display:grid;place-items:center;box-shadow:0 3px 0 rgba(0,0,0,.5)}
+.datenav .d{font-family:var(--f-disp);font-size:16px;min-width:0;flex:1;text-align:center;cursor:default;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.datenav .d span{display:block;font-family:var(--f-ui);font-size:9px;font-weight:900;letter-spacing:2px;opacity:.6;margin-top:-2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.navbtn{width:28px;height:28px;border:2px solid var(--ink);border-radius:8px;background:var(--panel3);color:#fff;cursor:pointer;font-size:14px;flex:0 0 auto;display:grid;place-items:center;box-shadow:0 3px 0 rgba(0,0,0,.5)}
 .navbtn:active{transform:translateY(3px);box-shadow:none}
 
 .view{flex:1;min-height:0;display:flex;flex-direction:column;gap:9px}
@@ -150,20 +168,23 @@ button{font-family:inherit}
 .gridwrap::-webkit-scrollbar-track{background:rgba(0,0,0,.3);border-radius:8px}
 .gridwrap::-webkit-scrollbar-thumb{background:var(--panel3);border-radius:8px;border:2px solid rgba(0,0,0,.5)}
 .grid{
-  display:grid;grid-template-columns:56px 1fr 116px;grid-template-rows:repeat(96,var(--row));
+  display:grid;grid-template-columns:56px 1fr;grid-template-rows:repeat(96,var(--row));
   position:relative;user-select:none;
 }
 .lines{
   grid-column:2/3;grid-row:1/-1;pointer-events:none;z-index:0;border-radius:6px;
-  background:
-    repeating-linear-gradient(to bottom, rgba(255,255,255,.13) 0 2px, rgba(0,0,0,0) 2px calc(var(--row)*4)),
-    repeating-linear-gradient(to bottom, rgba(255,255,255,.045) 0 1px, rgba(0,0,0,0) 1px var(--row));
+  position:relative;overflow:hidden;
 }
+/* hours outside the SOD-EOD window: collapsed to zero height by default, tinted purple when revealed */
+.zone{position:absolute;left:0;right:0;background:rgba(196,116,214,.17);border-radius:5px}
+.hline{position:absolute;left:0;right:0;height:2px;margin-top:-1px;background:rgba(255,255,255,.13)}
+.qline{position:absolute;left:0;right:0;height:1px;background:rgba(255,255,255,.045)}
 .tl{
   grid-column:1/2;font-family:var(--f-disp);font-size:13px;color:#9fb0ad;
   padding-right:9px;text-align:right;line-height:1;padding-top:2px;
 }
 .tl.noon{color:var(--gold)}
+.tl.dim{font-size:10px;color:#7d6f92;opacity:.75;padding-top:0}
 .cell{
   grid-column:2/3;z-index:1;border-radius:5px;cursor:crosshair;position:relative;
 }
@@ -225,17 +246,6 @@ button{font-family:inherit}
 .rz::after{content:'';position:absolute;left:50%;bottom:2px;width:28px;height:3px;margin-left:-14px;border-radius:3px;background:rgba(0,0,0,.3);opacity:0}
 .blk:hover .rz::after{opacity:1}
 
-/* event rail */
-.rail3{grid-column:3/4;grid-row:1/-1;position:relative;margin-left:8px;border-left:2px dashed rgba(255,255,255,.14);padding-left:8px}
-.evc{
-  position:absolute;left:8px;right:0;border-radius:8px;border:2px solid var(--ink);
-  background:var(--c,#0093ff);box-shadow:0 3px 0 rgba(0,0,0,.4);padding:2px 6px;overflow:hidden;
-  font-size:10.5px;font-weight:800;line-height:1.15;cursor:pointer;color:#fff;
-}
-.evc:hover{filter:brightness(1.15);transform:translateX(-2px)}
-.evc b{display:block;font-size:9px;opacity:.85;font-weight:700}
-.railhdr{position:sticky;top:0}
-
 /* now line */
 .nowline{position:absolute;left:56px;right:0;height:0;z-index:8;pointer-events:none}
 .nowline i{position:absolute;left:0;right:0;top:-1.5px;height:3px;background:var(--mult);box-shadow:0 0 10px rgba(254,95,85,.9)}
@@ -245,9 +255,41 @@ button{font-family:inherit}
   animation:nowb 2s ease-in-out infinite;
 }
 @keyframes nowb{0%,100%{transform:scale(1)}50%{transform:scale(1.09)}}
-.emptyday{position:absolute;left:56px;right:120px;top:calc(var(--row)*30);text-align:center;font-family:var(--f-disp);font-size:19px;color:rgba(255,255,255,.35);pointer-events:none}
+/* start-of-day / end-of-day markers — collapsible, icon sits left of the line */
+.edge{position:absolute;left:56px;right:0;height:0;z-index:7;pointer-events:none}
+.edge i{position:absolute;left:0;right:0;top:-1.5px;height:3px;background:var(--purple);box-shadow:0 0 8px rgba(154,91,214,.75)}
+.edge b{
+  position:absolute;left:-52px;top:-11px;font-family:var(--f-disp);font-size:11px;background:var(--purple);
+  border:2px solid var(--ink);border-radius:6px;padding:0 5px 1px;box-shadow:0 2px 0 rgba(0,0,0,.5);
+  pointer-events:auto;cursor:pointer;white-space:nowrap;
+}
+.edge b:hover{filter:brightness(1.15)}
+.emptyday{position:absolute;left:56px;right:0;text-align:center;font-family:var(--f-disp);font-size:19px;color:rgba(255,255,255,.35);pointer-events:none}
 
-/* ============ list view ============ */
+/* daily view layout: the TIMELINE + a per-task TODAY/WEEK done-time side panel */
+.daybody{flex:1;min-height:0;display:flex;gap:10px;overflow:hidden}
+.daymain{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+.dayinfo{width:230px;flex:0 0 230px;display:flex;flex-direction:column;overflow:hidden}
+/* split top/bottom, exactly in half — TODAY above, WEEK (Sun–Sat) below,
+   each its own label + a scrollable, sorted per-task list */
+.dnstat{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;padding:8px 0}
+.dnstat.top{border-bottom:2px solid rgba(255,255,255,.15)}
+.dnstat .dnlbl{flex:0 0 auto;font-size:10px;font-weight:900;letter-spacing:2px;opacity:.55;margin-bottom:7px}
+.dnstat .dnlist{flex:1;min-height:0;overflow-y:auto;display:grid;gap:6px;align-content:start;padding-right:2px}
+.dnempty{font-size:10px;opacity:.4;text-align:center;padding:6px 0;font-weight:700}
+/* blue = task/block color, red = event color — same convention the timeline
+   and CALENDAR grid use elsewhere. Events sort above tasks as their own
+   group (see renderDnList in 04-day.js), so the red/blue split reads as two
+   bands rather than an interleaved list. */
+.ttrow{display:flex;align-items:center;justify-content:space-between;gap:6px;background:var(--chip);color:#fff;border:2px solid var(--ink);border-radius:7px;padding:5px 7px;font-size:11px;font-weight:800;line-height:1.25}
+.ttrow .amt{flex:0 0 auto;font-size:10px;opacity:.85}
+.ttrow.evt{background:var(--event)}
+
+/* ============ shared segmented control + list-panel chrome ============
+   .segwrap/.seg are used by TASKS and STATS' filter rows; .listwrap/.list
+   are the QUOTAS tab's own list container. DAILY's TIMELINE/LIST toggle and
+   its LIST rendering (.lhdr/.lrow/.lgap/.lempty) are gone — TIMELINE is now
+   the only DAILY view. */
 .segwrap{display:flex;border-radius:10px;box-shadow:0 4px 0 rgba(0,0,0,.5)}
 .seg{font-family:var(--f-disp);font-size:14px;padding:6px 13px 7px;border:3px solid var(--ink);background:var(--panel2);color:#c8cfd6;cursor:pointer}
 .segwrap .seg:first-child{border-right-width:2px;border-radius:10px 0 0 10px}
@@ -257,35 +299,6 @@ button{font-family:inherit}
 .listwrap{flex:1;min-height:0;overflow:auto;background:rgba(12,20,19,.72);border:3px solid var(--ink);border-radius:14px;box-shadow:0 6px 0 rgba(0,0,0,.4), inset 0 2px 20px rgba(0,0,0,.5);padding:14px}
 .listwrap[hidden]{display:none}
 .list{display:grid;gap:7px;max-width:920px;margin:0 auto}
-.lhdr{display:flex;justify-content:space-between;align-items:baseline;font-size:10.5px;font-weight:900;letter-spacing:2px;opacity:.55;padding:0 8px 4px}
-.lhdr b{font-family:var(--f-disp);font-size:17px;letter-spacing:.5px;opacity:1}
-.lrow{
-  display:flex;align-items:center;gap:12px;background:var(--card);color:#1a1d21;
-  border:3px solid var(--ink);border-radius:10px;padding:9px 12px 9px 18px;
-  box-shadow:0 4px 0 rgba(0,0,0,.45);cursor:pointer;position:relative;overflow:hidden;
-  transition:transform .12s cubic-bezier(.2,1.6,.4,1),box-shadow .12s;
-}
-.lrow::before{content:'';position:absolute;left:0;top:0;bottom:0;width:8px;background:var(--c,#888)}
-.lrow:hover{transform:translateY(-2px) rotate(-.2deg);box-shadow:0 6px 0 rgba(0,0,0,.45)}
-.lrow .tm{font-family:var(--f-disp);font-size:15.5px;width:150px;flex:0 0 150px;white-space:nowrap;letter-spacing:.3px}
-.lrow .ti{flex:1;min-width:0;font-weight:900;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.lrow .ti em{font-style:normal;font-weight:600;opacity:.55;font-size:12.5px;margin-left:8px}
-.lrow .du{font-size:11px;font-weight:800;opacity:.5;flex:0 0 auto}
-.lrow.done{background:#dfe6df}
-.lrow.done .ti{text-decoration:line-through;opacity:.58}
-.lrow .gr{font-family:var(--f-disp);font-size:21px;line-height:1;padding:2px 9px 3px;border:3px solid var(--ink);border-radius:8px;color:#fff;box-shadow:0 3px 0 rgba(0,0,0,.35);flex:0 0 auto}
-.lrow .tick{position:static;transform:none;width:27px;height:27px;flex:0 0 auto;font-size:14px}
-.lrow.evt{background:var(--event);color:#fff;border-style:solid}
-.lrow.evt::before{background:rgba(0,0,0,.35)}
-.lrow.evt .du{opacity:.8}
-.lrow.evt .ti em{opacity:.8}
-.lrow .evtag{font-size:9.5px;font-weight:900;letter-spacing:1.4px;padding:3px 9px;border-radius:6px;border:2px solid var(--ink);background:rgba(0,0,0,.3);color:#fff;flex:0 0 auto}
-.lrow.pending{animation:pendglow 1.7s ease-in-out infinite}
-.lrow.nowrow::after{content:'NOW';position:absolute;right:-1px;top:-1px;font-family:var(--f-disp);font-size:10px;background:var(--mult);color:#fff;padding:1px 7px 2px;border:2px solid var(--ink);border-radius:0 8px 0 8px}
-.lgap{display:flex;align-items:center;gap:10px;font-size:10.5px;font-weight:900;letter-spacing:1.5px;color:rgba(255,255,255,.34);padding:1px 14px;cursor:pointer;transition:color .12s}
-.lgap:hover{color:var(--gold)}
-.lgap i{flex:1;height:2px;background:currentColor;border-radius:2px;display:block;opacity:.5}
-.lempty{text-align:center;font-family:var(--f-disp);font-size:20px;color:rgba(255,255,255,.35);padding:44px 0}
 
 /* ============ tasks ============ */
 .tkwrap{flex:1;min-height:0;overflow:auto;background:rgba(12,20,19,.72);border:3px solid var(--ink);border-radius:14px;box-shadow:0 6px 0 rgba(0,0,0,.4), inset 0 2px 20px rgba(0,0,0,.5);padding:14px}
@@ -303,6 +316,14 @@ button{font-family:inherit}
 }
 .tkrow .nm:hover{border-color:rgba(255,255,255,.14)}
 .tkrow .nm:focus{outline:none;background:#1b2026;border-color:var(--gold)}
+.tkrow .nmtxt{
+  flex:1;min-width:0;color:#fff;font-family:var(--f-ui);font-weight:800;font-size:15px;
+  padding:6px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.tkrow .hidtag{
+  font-size:9px;font-weight:900;letter-spacing:1.5px;color:#0e1518;background:#6b7780;
+  border-radius:5px;padding:2px 6px;flex:0 0 auto;
+}
 .tkrow .hrs{font-family:var(--f-disp);font-size:18px;color:var(--chip);min-width:74px;text-align:right;flex:0 0 auto}
 .tkrow.hid .hrs{color:#8fa0a8}
 .tkrow .cnt{font-size:10px;font-weight:800;opacity:.45;min-width:58px;text-align:right;flex:0 0 auto}
@@ -312,7 +333,6 @@ button{font-family:inherit}
 
 /* ============ calendar ============ */
 .calhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.calhead .m{font-family:var(--f-disp);font-size:26px;min-width:230px;text-align:center}
 .calwrap{flex:1;min-height:0;overflow:auto;background:rgba(12,20,19,.72);border:3px solid var(--ink);border-radius:14px;box-shadow:0 6px 0 rgba(0,0,0,.4), inset 0 2px 20px rgba(0,0,0,.5);padding:10px}
 .dow{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px}
 .dow div{text-align:center;font-size:10px;font-weight:900;letter-spacing:2px;opacity:.55}
@@ -333,14 +353,35 @@ button{font-family:inherit}
 .day .fill{position:absolute;left:0;right:0;bottom:0;height:5px;background:rgba(255,255,255,.1)}
 .day .fill i{display:block;height:100%;background:var(--chip)}
 .day .won{position:absolute;right:4px;bottom:8px;font-size:15px}
-.agenda{margin-top:10px;display:grid;gap:6px}
-.agenda h4{margin:6px 0 2px;font-family:var(--f-disp);font-size:16px;font-weight:400}
-.agrow{display:flex;gap:9px;align-items:center;background:var(--panel);border:2px solid var(--ink);border-radius:9px;padding:6px 9px;box-shadow:0 3px 0 rgba(0,0,0,.4);cursor:pointer}
+.agendapanel{padding:8px 8px 9px}
+.agenda{display:grid;gap:4px}
+.agrow{display:flex;gap:9px;align-items:center;background:var(--panel);border:2px solid var(--ink);border-radius:9px;padding:5px 9px;box-shadow:0 3px 0 rgba(0,0,0,.4);cursor:pointer}
 .agrow .dot{width:12px;height:12px;border-radius:4px;border:2px solid var(--ink);flex:0 0 auto}
 .agrow .w{flex:1;min-width:0}
 .agrow .w b{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.agrow .w span{font-size:10.5px;opacity:.65;font-weight:700}
+.agrow .w span{font-size:10px;opacity:.6;font-weight:800;letter-spacing:.4px}
 .agrow:hover{filter:brightness(1.15)}
+.agendapanel .panlbl.railq{margin-top:10px}
+#railQuotas{display:grid;gap:4px}
+#railQuotas .qrow{padding:5px 8px;font-size:11px;border-width:2px;border-radius:7px;box-shadow:0 2px 0 rgba(0,0,0,.3)}
+.railqlbl{font-size:9px;font-weight:900;letter-spacing:1.5px;opacity:.45;padding:2px 1px 0}
+#railQuotas .railqlbl:first-child{padding-top:0}
+
+/* ============ quotas ============ */
+.qsep{display:flex;align-items:center;gap:10px;cursor:pointer;padding:8px 2px 6px;margin-top:4px}
+.qsep:first-child{margin-top:0}
+.qsep .lbl{font-family:var(--f-disp);font-size:14px;white-space:nowrap;letter-spacing:.4px}
+.qsep .ln{flex:1;height:2px;background:rgba(255,255,255,.15)}
+.qsep .plus{font-size:13px;font-weight:900;opacity:.4;flex:0 0 auto}
+.qsep:hover .lbl{color:var(--gold)}
+.qsep:hover .ln{background:var(--gold)}
+.qsep:hover .plus{opacity:1;color:var(--gold)}
+/* purple = quota color, matching blue = task and red = event elsewhere */
+.qrow{display:flex;align-items:center;gap:9px;background:var(--purple);color:#fff;border:3px solid var(--ink);border-radius:10px;padding:8px 12px;font-weight:800;font-size:13.5px;cursor:pointer;box-shadow:0 3px 0 rgba(0,0,0,.3)}
+.qrow .tx{flex:1;min-width:0;word-break:break-word}
+.qrow.done{background:var(--green);color:#08251a}
+.qrow.done .tx{text-decoration:line-through;opacity:.75}
+.qrow:hover{filter:brightness(1.05)}
 
 /* ============ modal ============ */
 .scrim{position:fixed;inset:0;background:rgba(3,10,9,.72);backdrop-filter:blur(3px);z-index:60;display:grid;place-items:center;padding:16px;animation:fade .16s}
@@ -436,7 +477,7 @@ textarea.inp{resize:vertical;min-height:56px;font-weight:500}
 .scard .s{font-size:10.5px;font-weight:700;opacity:.5}
 .scard.good .v{color:var(--green)} .scard.hot .v{color:var(--orange)} .scard.blue .v{color:var(--chip)}
 .scard.cashv .v{color:var(--gold)} .scard.rankv .v{color:var(--mult)}
-.panlbl{font-size:10px;font-weight:900;letter-spacing:2px;opacity:.55;margin-bottom:9px}
+.panlbl{font-size:10px;font-weight:900;letter-spacing:2px;opacity:.55;margin-bottom:7px}
 .stable{width:100%;border-collapse:collapse;font-size:12.5px}
 .stable th{text-align:left;font-size:9px;letter-spacing:1.6px;opacity:.55;padding:4px 8px;font-weight:900}
 .stable td{padding:5px 8px;border-top:1px solid rgba(255,255,255,.08);font-weight:700}
@@ -461,8 +502,11 @@ textarea.inp{resize:vertical;min-height:56px;font-weight:500}
   font-family:var(--f-disp);font-size:16px;box-shadow:0 5px 0 rgba(0,0,0,.5);animation:tin .25s cubic-bezier(.2,1.6,.4,1);
 }
 @keyframes tin{from{transform:translate(-50%,26px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
-.tlist{display:grid;gap:7px;max-height:270px;overflow:auto}
+.tlist{display:grid;gap:7px;max-height:270px;overflow-y:auto;overflow-x:hidden}
 .trow{display:flex;gap:8px;align-items:center;background:var(--panel2);border:2px solid var(--ink);border-radius:9px;padding:7px 9px;font-size:13.5px;font-weight:800}
+.trow.click{cursor:pointer;transition:filter .12s,border-color .12s}
+.trow.click:hover{filter:brightness(1.22);border-color:var(--gold)}
+.trow.click *{cursor:pointer}
 .trow .w{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .trow small{opacity:.6;font-weight:700}
 
@@ -472,9 +516,12 @@ textarea.inp{resize:vertical;min-height:56px;font-weight:500}
   .rail{width:100%;flex:0 0 auto}
   .railbtns{grid-template-columns:1fr 1fr}
   .gridwrap,.listwrap,.tkwrap{height:70vh}
-  .grid{grid-template-columns:48px 1fr 0}
-  .rail3{display:none}
+  .grid{grid-template-columns:48px 1fr}
   .nowline{left:48px}
+  .edge{left:48px}
+  .edge b{left:2px}
+  .daybody{flex-direction:column}
+  .dayinfo{width:100%;flex:0 0 auto;max-height:220px}
   .lrow .tm{width:118px;flex:0 0 118px;font-size:13.5px}
   .lrow .du{display:none}
   .bar .nm{width:110px;flex:0 0 110px}
@@ -512,14 +559,22 @@ textarea.inp{resize:vertical;min-height:56px;font-weight:500}
     <div class="railbtns">
       <button class="btn blue" id="btnRecap">RECAP TODAY</button>
     </div>
+
+    <div class="panel agendapanel">
+      <div class="panlbl">UPCOMING</div>
+      <div class="agenda" id="agenda"></div>
+      <div class="panlbl railq">QUOTAS</div>
+      <div id="railQuotas"></div>
+    </div>
   </aside>
 
   <main class="main">
     <nav class="tabs">
-      <button class="tab on" data-view="day">TODAY</button>
-      <button class="tab" data-view="cal">CALENDAR</button>
+      <button class="tab on" data-view="day">DAILY</button>
+      <button class="tab" data-view="week">QUOTAS</button>
       <button class="tab" data-view="tasks">TASKS</button>
-      <button class="tab" data-view="stats">STATS</button>
+      <button class="tab" data-view="cal">CALENDAR</button>
+      <button class="tab" data-view="stats" hidden>STATS</button>
       <div class="spacer"></div>
       <button class="btn icon" id="btnHelp" title="How it works">?</button>
       <button class="btn icon" id="btnSound" title="Sound">♪</button>
@@ -534,23 +589,45 @@ textarea.inp{resize:vertical;min-height:56px;font-weight:500}
           <button class="navbtn" id="dNext">›</button>
         </div>
         <button class="btn sm blue" id="btnQuick">+ BLOCK</button>
-        <button class="btn sm" id="btnTemplates">TEMPLATES</button>
+        <button class="btn sm" id="btnAutofill">AUTOFILL</button>
         <div class="spacer"></div>
         <button class="btn gold" id="btnGrade" hidden>⚑ GRADE 0</button>
-        <div class="segwrap">
-          <button class="seg on" data-dv="timeline">TIMELINE</button>
-          <button class="seg" data-dv="list">LIST</button>
+        <button class="btn sm" id="btnToday">TODAY</button>
+      </div>
+      <div class="daybody">
+        <div class="daymain">
+          <div class="gridwrap" id="gridwrap"><div class="grid" id="grid"></div></div>
+        </div>
+        <div class="dayinfo panel">
+          <div class="dnstat top"><div class="dnlbl">TODAY</div><div class="dnlist" id="dnTodayList"></div></div>
+          <div class="dnstat bottom"><div class="dnlbl">WEEK</div><div class="dnlist" id="dnWeekList"></div></div>
         </div>
       </div>
-      <div class="gridwrap" id="gridwrap"><div class="grid" id="grid"></div></div>
-      <div class="listwrap" id="listwrap" hidden><div class="list" id="list"></div></div>
+    </section>
+
+    <section class="view" id="viewWeek" hidden>
+      <div class="toolbar">
+        <div class="datenav" id="quotaNav">
+          <button class="navbtn" id="qPrev">‹</button>
+          <div class="d outline" id="qLabel">DATE – DATE</div>
+          <button class="navbtn" id="qNext">›</button>
+        </div>
+        <button class="btn sm gold" id="btnNewQuota">+ QUOTA</button>
+        <div class="spacer"></div>
+        <button class="btn sm" id="btnQThis">THIS WEEK</button>
+      </div>
+      <div class="listwrap">
+        <div class="list" id="quotaList"></div>
+      </div>
     </section>
 
     <section class="view" id="viewCal" hidden>
       <div class="calhead">
-        <button class="navbtn" id="mPrev">‹</button>
-        <div class="m outline" id="mLabel">MONTH</div>
-        <button class="navbtn" id="mNext">›</button>
+        <div class="datenav" id="monthNav">
+          <button class="navbtn" id="mPrev">‹</button>
+          <div class="d outline" id="mLabel">MONTH</div>
+          <button class="navbtn" id="mNext">›</button>
+        </div>
         <button class="btn sm gold" id="btnNewEvt">+ NEW EVENT</button>
         <div class="spacer"></div>
         <button class="btn sm" id="btnMToday">THIS MONTH</button>
@@ -558,7 +635,6 @@ textarea.inp{resize:vertical;min-height:56px;font-weight:500}
       <div class="calwrap">
         <div class="dow"><div>SUN</div><div>MON</div><div>TUE</div><div>WED</div><div>THU</div><div>FRI</div><div>SAT</div></div>
         <div class="calgrid" id="calgrid"></div>
-        <div class="agenda" id="agenda"></div>
       </div>
     </section>
 
@@ -566,12 +642,10 @@ textarea.inp{resize:vertical;min-height:56px;font-weight:500}
       <div class="toolbar">
         <div class="segwrap" id="tkVisSeg">
           <button class="seg on" data-tv="visible">VISIBLE</button>
-          <button class="seg" data-tv="hidden">HIDDEN</button>
           <button class="seg" data-tv="all">ALL</button>
         </div>
         <div class="segwrap" id="tkSortSeg">
-          <button class="seg on" data-ts="new">NEWEST</button>
-          <button class="seg" data-ts="az">A–Z</button>
+          <button class="seg on" data-ts="az">A–Z</button>
           <button class="seg" data-ts="freq">FREQUENCY</button>
         </div>
         <div class="spacer"></div>
@@ -619,7 +693,7 @@ textarea.inp{resize:vertical;min-height:56px;font-weight:500}
         </div>
         <div class="scards" id="scards"></div>
         <div class="panel" id="taskPanel">
-          <div class="panlbl">HOURS OF TASK</div>
+          <div class="panlbl">HOURS OF TASK  ·  TIME THAT COUNTED</div>
           <div class="bars" id="taskBars"></div>
         </div>
         <div class="panel" id="catPanel">
@@ -652,23 +726,38 @@ const pad = n => (n < 10 ? '0' : '') + n;
 const uid = () => Math.random().toString(36).slice(2, 10);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
+/* Grades you choose. The percentages are the share of a block's time that
+   counts toward the day's score. */
 const GRADES = [
   { g: 'A', pts: 100, color: '#35bd86', label: 'superbly done' },
-  { g: 'B', pts: 80,  color: '#0093ff', label: 'solid' },
-  { g: 'C', pts: 60,  color: '#ffc93d', label: 'partial' },
-  { g: 'D', pts: 35,  color: '#ff8c33', label: 'barely' },
-  { g: 'F', pts: 0,   color: '#fe5f55', label: "didn't do it" }
+  { g: 'B', pts: 90,  color: '#0093ff', label: 'solid' },
+  { g: 'C', pts: 50,  color: '#ffc93d', label: 'half of it' },
+  { g: 'D', pts: 30,  color: '#ff8c33', label: 'barely' },
+  { g: 'F', pts: 20,  color: '#fe5f55', label: "didn't do it" }
 ];
-const ptsOf = g => { const x = GRADES.find(v => v.g === g); return x ? x.pts : 0; };
-const colOf = g => { const x = GRADES.find(v => v.g === g); return x ? x.color : '#888'; };
-const gradeOf = g => GRADES.find(v => v.g === g) || GRADES[GRADES.length - 1];
+/* U is never chosen — it is stamped on anything still ungraded once the day
+   is over. It scores below F on purpose: an honest F beats walking away. */
+const AUTO = { g: 'U', pts: 10, color: '#8fa0a8', label: 'never graded' };
+const ALL_GRADES = GRADES.concat([AUTO]);
+const ptsOf = g => { const x = ALL_GRADES.find(v => v.g === g); return x ? x.pts : 0; };
+const colOf = g => { const x = ALL_GRADES.find(v => v.g === g); return x ? x.color : '#888'; };
+const gradeOf = g => ALL_GRADES.find(v => v.g === g) || AUTO;
 
 /* Two kinds of block. A TASK block is an instance of one of your tasks — blue,
-   graded, and it drives the score. An EVENT block is a calendar event pulled
-   into the day — red, never graded, counts toward booked time and rank only. */
+   graded, and it drives the score. An EVENT block is a calendar event — red,
+   never graded, counts toward booked time and rank only. Every event
+   occurrence is always an event block on its date, kept in sync by
+   syncEventsOn(); there is no manual "pull" step. */
 const C_BLOCK = '#0093ff';
 const C_EVENT = '#e2564c';
+/* one-off events go green in the CALENDAR month grid only, so a genuine
+   appointment stands out from the wall of recurring commitments */
+const C_ONEOFF = '#35bd86';
 const isEvent = b => !!b.evId;
+
+/* Anything before today is sealed: no creating, editing, regrading or
+   deleting. Today stays fully editable even for hours already gone. */
+const isPastDay = ds => ds < todayStr();
 
 /* ---------- date helpers ---------- */
 const fmtD = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
@@ -693,12 +782,14 @@ const BLANK = () => ({
   days: {},            // 'YYYY-MM-DD' -> {blocks:[]}  block = {id,start,len,taskId|evId,note,done,grade}
   events: [],          // {id,date,s,e,title,note,rep,until,skip}   s/e = minutes from midnight
   templates: [],       // {id,name,blocks:[]}
+  quotas: [],          // {id,date,text,note,done,created} — QUOTAS tab only, never a Task/Block
   stats: {},
-  settings: { sound: true, dayView: 'timeline' }
+  settings: { sound: true }
 });
 let S = BLANK();
 let cur = todayStr();          // date shown in THE DAY
 let calM = new Date();         // month shown in CALENDAR
+let quotaAnchor = todayStr();  // first day of the 7-day window shown in QUOTAS
 let undoStack = [];
 
 const getDay = ds => (S.days[ds] || (S.days[ds] = { blocks: [] }));
@@ -708,7 +799,10 @@ const dayOf = ds => S.days[ds] || { blocks: [] };
    Score is 0–100: how well you used the time you booked.
    Every block is weighted by its length, ungraded time counts as 0. */
 const taskBlocks = d => d.blocks.filter(b => !isEvent(b));
-const bookedSlots = d => d.blocks.reduce((t, b) => t + b.len, 0);          // events included
+const bookedSlots = d => d.blocks.reduce((t, b) => t + effLen(b), 0);     // events included, graded down
+const rawBooked = d => d.blocks.reduce((t, b) => t + b.len, 0);           // what is on the timeline
+/* Score still weights by the full booked length — an F has to drag the score
+   down, so it cannot also vanish from the denominator. */
 const scoreWeight = d => taskBlocks(d).reduce((t, b) => t + b.len, 0);     // events excluded
 const gradedSlots = d => taskBlocks(d).reduce((t, b) => t + (b.done ? b.len : 0), 0);
 function dayScore(d) {
@@ -723,11 +817,28 @@ function gradedScore(d) {
   if (!g) return 0;
   return Math.round(taskBlocks(d).reduce((t, b) => t + (b.done ? ptsOf(b.grade) * b.len : 0), 0) / g);
 }
-/* RANK 0–10: how full the day is. A full 12h of booked blocks = 10. */
-const DAY_HOURS = 12;
+/* How much of a block's time actually counts once it is graded.
+   F and U hand the time back entirely — you did not spend it on this.
+   D gives half. C and up count in full, as does anything not yet graded. */
+const GRADE_TIME = { A: 1, B: 1, C: 1, D: 0.5, F: 0, U: 0 };
+const effLen = b => (b.done && GRADE_TIME[b.grade] != null) ? b.len * GRADE_TIME[b.grade] : b.len;
+
+/* The day's working window. 9:00a–10:00p unless blocks reach past either
+   edge, in which case the window stretches to hold them. */
+const SOD_DEF = 36, EOD_DEF = 88;
+function dayEdges(d) {
+  let sod = SOD_DEF, eod = EOD_DEF;
+  (d.blocks || []).forEach(b => {
+    if (b.start < sod) sod = b.start;
+    if (b.start + b.len > eod) eod = b.start + b.len;
+  });
+  return { sod: clamp(sod, 0, 95), eod: clamp(eod, 1, SLOTS) };
+}
+const windowSlots = d => { const e = dayEdges(d); return Math.max(4, e.eod - e.sod); };
+
+/* RANK 0–10: how full the working window is, counting only time that stuck. */
 function dayRank(d) {
-  const hrs = bookedSlots(d) / 4;
-  return Math.min(10, Math.round(hrs / DAY_HOURS * 100) / 10);
+  return Math.min(10, Math.round(bookedSlots(d) / windowSlots(d) * 100) / 10);
 }
 /* GOLD 0–1000 = SCORE × RANK */
 const dayGold = d => Math.round(dayScore(d) * dayRank(d));
@@ -737,7 +848,28 @@ const METRICS = {
   gold:  { key: 'gold',  label: 'GOLD',  max: 1000, color: '#ffc93d', fmt: v => Math.round(v).toLocaleString() }
 };
 
-const hasActivity = ds => (S.days[ds] ? S.days[ds].blocks : []).some(b => b.done && !isEvent(b));
+/* A day only counts toward the streak if you graded something yourself —
+   an auto-U day means you planned and then never came back. */
+const hasActivity = ds => (S.days[ds] ? S.days[ds].blocks : []).some(b => b.done && !isEvent(b) && !b.auto);
+
+/* Stamp U on every block left ungraded on a day that has ended. */
+let lastSeal = '';
+function sealPastDays(force) {
+  const t = todayStr();
+  if (!force && lastSeal === t) return false;
+  lastSeal = t;
+  let changed = false;
+  Object.keys(S.days).forEach(ds => {
+    if (!isPastDay(ds)) return;
+    S.days[ds].blocks.forEach(b => {
+      if (isEvent(b) || b.done) return;
+      b.done = true; b.grade = 'U'; b.auto = true;
+      changed = true;
+    });
+  });
+  if (changed) save();
+  return changed;
+}
 function computeStreak() {
   let ds = todayStr();
   if (!hasActivity(ds)) ds = shiftD(ds, -1);   // today isn't over yet — doesn't break it
@@ -762,7 +894,7 @@ const LS_KEY = 'baron.save';
 const LS_LEGACY = 'daylatro.v2';        // pre-Baron key, read once then retired
 let fileHandle = null, fsStatus = 'off', saveTimer = null;
 
-function snapshot() { return JSON.stringify({ v: 4, tasks: S.tasks, days: S.days, events: S.events, templates: S.templates, stats: S.stats, settings: S.settings }); }
+function snapshot() { return JSON.stringify({ v: 4, tasks: S.tasks, days: S.days, events: S.events, templates: S.templates, quotas: S.quotas, stats: S.stats, settings: S.settings }); }
 
 function save() {
   try { localStorage.setItem(LS_KEY, snapshot()); } catch (e) { /* private mode */ }
@@ -783,12 +915,26 @@ function adopt(o) {
     days: o.days || {},
     events: o.events || [],
     templates: o.templates || [],
+    /* v4 saves had two separate features here: S.deadlines (a per-day
+       checklist, array) and S.quotas (per-day-per-task time apportioning,
+       object keyed by date). The quota feature was removed outright — its
+       name is what the checklist now goes by. o.quotas from an old save is
+       the old per-task object shape, not an array, so it's discarded rather
+       than migrated; o.deadlines (if present) becomes the new S.quotas. */
+    quotas: Array.isArray(o.quotas) ? o.quotas : (Array.isArray(o.deadlines) ? o.deadlines : []),
     stats: Object.assign(b.stats, o.stats || {}),
     settings: Object.assign(b.settings, o.settings || {})
   };
   stripCats();
   if (o.v !== 4) migrateToTasks();
+  migrateGrades();
   return true;
+}
+/* the fail grade is F. A build in between briefly called it E — undo that. */
+function migrateGrades() {
+  Object.keys(S.days).forEach(k => (S.days[k].blocks || []).forEach(b => {
+    if (b.grade === 'E') b.grade = 'F';
+  }));
 }
 /* categories are gone — drop any left over in an older save file */
 function stripCats() {
@@ -968,19 +1114,45 @@ const taskOf = id => S.tasks.find(t => t.id === id);
 function taskLabel(b) {
   if (isEvent(b)) return b.evTitle || 'Event';
   const t = taskOf(b.taskId);
-  return t ? t.name : 'Deleted task';
+  /* taskName is stamped onto blocks when a task is deleted, so the archive
+     never turns into a wall of "Deleted task" */
+  return t ? t.name : (b.taskName || 'Deleted task');
+}
+/* called before a task is removed, so its history keeps a readable label */
+function stampTaskName(id, name) {
+  Object.keys(S.days).forEach(k => (S.days[k].blocks || []).forEach(b => {
+    if (b.taskId === id) b.taskName = name;
+  }));
+  S.templates.forEach(t => (t.blocks || []).forEach(b => { if (b.taskId === id) b.taskName = name; }));
 }
 function addTask(name) {
   const t = { id: 'tk' + uid() + (taskSeq++), name: String(name || 'New task').trim() || 'New task', hidden: false, created: Date.now() + taskSeq };
   S.tasks.push(t);
   return t;
 }
+/* done  = graded blocks — the record, which can never be erased
+   ahead = blocks still waiting for a grade, which can */
 function taskStats(id) {
-  let slots = 0, count = 0;
-  Object.keys(S.days).forEach(k => (S.days[k].blocks || []).forEach(b => {
-    if (b.taskId === id) { slots += b.len; count++; }
-  }));
-  return { slots: slots, count: count };
+  let slots = 0, count = 0, done = 0, ahead = 0;
+  Object.keys(S.days).forEach(k => {
+    (S.days[k].blocks || []).forEach(b => {
+      if (b.taskId !== id) return;
+      slots += effLen(b); count++;
+      if (b.done) done++; else ahead++;
+    });
+  });
+  return { slots: slots, count: count, done: done, ahead: ahead };
+}
+/* wipe a task's ungraded blocks on days that are still editable */
+function dropTaskBlocks(id) {
+  let n = 0;
+  Object.keys(S.days).forEach(k => {
+    if (isPastDay(k)) return;
+    const d = S.days[k], before = d.blocks.length;
+    d.blocks = d.blocks.filter(b => !(b.taskId === id && !b.done));
+    n += before - d.blocks.length;
+  });
+  return n;
 }
 const visibleTasks = () => S.tasks.filter(t => !t.hidden);
 
@@ -991,9 +1163,10 @@ function occupancy(d, alsoEvents, ds) {
   if (alsoEvents) eventsOn(ds).forEach(ev => { for (let i = Math.floor(ev.s / 15); i < Math.ceil(ev.e / 15) && i < SLOTS; i++) if (!a[i]) a[i] = 'EV'; });
   return a;
 }
-function carve(d, start, end) {
+function carve(d, start, end, keepEvents) {
   const out = [];
   d.blocks.forEach(b => {
+    if (keepEvents && isEvent(b)) { out.push(b); return; }   // event blocks never cannibalize each other
     const bs = b.start, be = b.start + b.len;
     if (be <= start || bs >= end) { out.push(b); return; }
     if (bs < start) out.push(Object.assign({}, b, { id: uid(), len: start - bs }));
@@ -1009,18 +1182,72 @@ function addBlock(ds, start, len, taskId, note) {
   d.blocks.sort((x, y) => x.start - y.start);
   return b;
 }
-/* pull a calendar event into the day as a red, ungradeable block */
-function addEventBlock(ds, ev) {
-  const start = clamp(Math.floor(ev.s / 15), 0, 95);
-  const end = clamp(Math.max(start + 1, Math.ceil(ev.e / 15)), 1, 96);
-  const d = getDay(ds);
-  carve(d, start, end);
-  const b = { id: uid(), start: start, len: end - start, evId: ev.id, evTitle: ev.title, note: ev.note || '', done: false, grade: null };
-  d.blocks.push(b);
-  d.blocks.sort((x, y) => x.start - y.start);
-  return b;
+/* Events are never "pulled" — every occurrence of an event IS an event block,
+   always. syncEventsOn(ds) is the one place that keeps a date's event blocks
+   true to S.events: it adds any occurrence missing a block, carving room for
+   it against TASK blocks only (an event owns the calendar, so it wins a
+   conflict with a plain block same as a manual block always could) — it
+   never carves into an existing EVENT block, so two genuinely overlapping
+   calendar events (a real double-booking) both keep their own block instead
+   of the second one silently truncating/deleting the first — and drops any
+   event block whose event no longer happens there (covers cancelling,
+   skipping, ending a series, and moving an event's date/time/repeat — all in
+   one place). Sealed past days are never rewritten. Cheap and idempotent —
+   safe to call on every render of a date. */
+function syncEventsOn(ds) {
+  if (isPastDay(ds)) return false;
+  const occ = eventsOn(ds);
+  const d = S.days[ds];
+  if (!occ.length) {
+    if (!d || !d.blocks.some(isEvent)) return false;
+    const before = d.blocks.length;
+    d.blocks = d.blocks.filter(b => !isEvent(b));
+    return d.blocks.length !== before;
+  }
+  const day = getDay(ds);
+  let changed = false;
+  occ.forEach(ev => {
+    const start = clamp(Math.floor(ev.s / 15), 0, 95);
+    const end = clamp(Math.max(start + 1, Math.ceil(ev.e / 15)), 1, 96);
+    const evNote = ev.note || '';
+    /* an existing block only counts as "synced" if it still matches the
+       event's CURRENT time/title/note — a retime/rename/renote leaves the
+       old block sitting there stale otherwise, since a presence-only check
+       (just "does a block with this evId exist") never notices the event
+       moved out from under it. `matches.length !== 1` also mops up any
+       leftover duplicate event-blocks from earlier bugs. */
+    const matches = day.blocks.filter(b => b.evId === ev.id);
+    const stale = matches.length !== 1 || matches[0].start !== start || matches[0].len !== (end - start) ||
+      matches[0].evTitle !== ev.title || matches[0].note !== evNote;
+    if (!stale) return;
+    if (matches.length) day.blocks = day.blocks.filter(b => b.evId !== ev.id);
+    carve(day, start, end, true);
+    day.blocks.push({ id: uid(), start: start, len: end - start, evId: ev.id, evTitle: ev.title, note: evNote, done: false, grade: null });
+    changed = true;
+  });
+  const before = day.blocks.length;
+  day.blocks = day.blocks.filter(b => !isEvent(b) || occ.some(ev => ev.id === b.evId));
+  if (day.blocks.length !== before) changed = true;
+  if (changed) day.blocks.sort((a, b) => a.start - b.start);
+  return changed;
 }
-const isPulled = (ds, evId) => dayOf(ds).blocks.some(b => b.evId === evId);
+/* sweep every date that already has an S.days entry — call after any edit to
+   S.events so already-touched days (past renders of WEEKLY/MONTHLY/DAILY)
+   don't go stale until next visited */
+function syncAllEventBlocks() {
+  let changed = false;
+  /* Every date that already has a day entry, PLUS every event's own anchor
+     date (`ev.date`) — this is what actually finds and materializes an old
+     "sitting there unpulled" event, which by definition has no S.days entry
+     yet (nothing was ever placed on that date). A recurring event's *other*
+     occurrences are intentionally not pre-materialized here — they can't be,
+     recurrence can be infinite — they sync lazily the moment their date is
+     ever rendered (DAILY/MONTHLY/WEEKLY all call syncEventsOn per date). */
+  const dates = new Set(Object.keys(S.days));
+  S.events.forEach(ev => { if (ev.date) dates.add(ev.date); });
+  dates.forEach(ds => { if (syncEventsOn(ds)) changed = true; });
+  return changed;
+}
 const findBlock = (ds, id) => dayOf(ds).blocks.find(b => b.id === id);
 
 /* ---------- events & recurrence ---------- */
@@ -1067,8 +1294,126 @@ function upcoming(fromDs, nDays, limit) {
   }
   return out;
 }
+/* the single nearest event that has not started yet — skips anything on
+   `fromDs` that is already in progress or already over (s <= now), so a
+   meeting that started 10 minutes ago never shows as "upcoming". Every day
+   after `fromDs` has no such filter — nothing there could have started yet. */
+function nextUpcomingEvent(fromDs) {
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  for (let i = 0; i < 60; i++) {
+    const ds = shiftD(fromDs, i);
+    const evs = eventsOn(ds).filter(e => i > 0 || e.s > nowMin);
+    if (evs.length) return evs[0];
+  }
+  return null;
+}
 const isRepeating = ev => ev && ev.rep && ev.rep !== 'none';
+/* one-offs first, then repeats, each by start time */
+const calOrder = evs => evs.slice().sort((a, b) =>
+  (isRepeating(a) ? 1 : 0) - (isRepeating(b) ? 1 : 0) || a.s - b.s || a.e - b.e);
 const minLabel = m => { const h = Math.floor(m / 60) % 24, mm = m % 60; const ap = h < 12 ? 'a' : 'p'; const hh = h % 12 || 12; return hh + ':' + pad(mm) + ap; };
+
+/* ---------- quotas ----------
+   A quota is a homework/milestone checklist item pinned to one date. It is
+   deliberately not a Task (no taskId, never instantiated into a block) and is
+   never shown outside the QUOTAS tab (and its mirror in the rail's own
+   "today" list). This used to be called a "deadline"; the old "quota" name
+   (per-task, per-day time apportioning) belonged to a different feature that
+   has been removed outright — see §8/§13 in CONTEXT.md for the history. */
+let quotaSeq = 0;
+const quotasOn = ds => S.quotas.filter(x => x.date === ds).sort((a, b) => a.created - b.created);
+function addQuota(ds, text) {
+  const t = String(text || '').trim(); if (!t) return null;
+  const item = { id: uid(), date: ds, text: t, note: '', done: false, created: Date.now() + (quotaSeq++) };
+  S.quotas.push(item);
+  return item;
+}
+function toggleQuota(id) { const it = S.quotas.find(x => x.id === id); if (it) it.done = !it.done; }
+function deleteQuota(id) { S.quotas = S.quotas.filter(x => x.id !== id); }
+/* label for the QUOTAS tab's 7-day window, e.g. "AUG 21 – 27" or, when the
+   window crosses a month, "AUG 29 – SEP 4" */
+function quotaRangeLabel(days) {
+  const a = parseD(days[0]), b = parseD(days[days.length - 1]);
+  const mA = MON[a.getMonth()].slice(0, 3).toUpperCase(), mB = MON[b.getMonth()].slice(0, 3).toUpperCase();
+  return a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear()
+    ? mA + ' ' + a.getDate() + ' – ' + b.getDate()
+    : mA + ' ' + a.getDate() + ' – ' + mB + ' ' + b.getDate();
+}
+
+/* the calendar week (Sunday..Saturday) containing `ds` — distinct from the
+   QUOTAS tab's "THIS WEEK", which means the 7 days starting today, not a
+   Sunday-anchored calendar week. Kept private to this readout. */
+function sundayOf(ds) {
+  const d = parseD(ds);
+  const start = new Date(d); start.setDate(d.getDate() - d.getDay());
+  return fmtD(start);
+}
+/* DAILY's side panel (`.dayinfo`): per-task DONE (graded) time, TODAY and
+   THIS (Sunday–Saturday) WEEK — sorted most time first, only tasks with at
+   least one done block in the period. Time is *effective* time, not raw
+   block length: it runs every done block through `effLen`, the same
+   grade-weighting the score/rank arithmetic uses everywhere else — F/U hand
+   the whole block back (0%), D half (50%), C/B/A count in full (100%). This
+   matters here specifically: without it, a 2-hour block graded D would
+   still read as 2 hours of "time done" on this task, which both
+   overstates the task's tracked time and removes any cost to grading it
+   low — the same block a moment ago cost you rank/score for exactly that
+   half. Events never appear here (`taskBlocks` already excludes them) — see
+   doneEventBreakdownOn/Week below for their own, separate readout; ungraded
+   blocks aren't "done" yet, so they don't count either. */
+function doneTaskBreakdownOn(ds) {
+  const per = {};
+  taskBlocks(dayOf(ds)).filter(b => b.done).forEach(b => { per[b.taskId] = (per[b.taskId] || 0) + effLen(b); });
+  return Object.keys(per)
+    .map(tid => ({ task: taskOf(tid), slots: per[tid] }))
+    .filter(x => x.task)
+    .sort((a, b) => b.slots - a.slots || a.task.name.localeCompare(b.task.name));
+}
+function doneTaskBreakdownWeek(ds) {
+  const sun = sundayOf(ds);
+  const per = {};
+  for (let i = 0; i < 7; i++) {
+    taskBlocks(dayOf(shiftD(sun, i))).filter(b => b.done).forEach(b => { per[b.taskId] = (per[b.taskId] || 0) + effLen(b); });
+  }
+  return Object.keys(per)
+    .map(tid => ({ task: taskOf(tid), slots: per[tid] }))
+    .filter(x => x.task)
+    .sort((a, b) => b.slots - a.slots || a.task.name.localeCompare(b.task.name));
+}
+/* same idea, for events — grouped by `evId` (an event's identity survives a
+   mid-series retitle; `evTitle` on any one block is only that block's
+   point-in-time label, so the most recently-seen title wins). Events are
+   never "done" — sealPastDays explicitly skips them (`if (isEvent(b) ||
+   b.done) return;`) and there is no grading UI for them at all — so there is
+   no done-filter here, every event block that exists on the day counts.
+   `effLen(b)` still resolves correctly: it only discounts when `b.done` is
+   true, which for an event block is never, so it always returns the block's
+   raw length — same call as the task breakdown, for one shared code path,
+   even though the discount never actually fires here. */
+function doneEventBreakdownOn(ds) {
+  const per = {}, name = {};
+  dayOf(ds).blocks.filter(isEvent).forEach(b => {
+    per[b.evId] = (per[b.evId] || 0) + effLen(b);
+    name[b.evId] = b.evTitle || 'Event';
+  });
+  return Object.keys(per)
+    .map(id => ({ title: name[id], slots: per[id] }))
+    .sort((a, b) => b.slots - a.slots || a.title.localeCompare(b.title));
+}
+function doneEventBreakdownWeek(ds) {
+  const sun = sundayOf(ds);
+  const per = {}, name = {};
+  for (let i = 0; i < 7; i++) {
+    dayOf(shiftD(sun, i)).blocks.filter(isEvent).forEach(b => {
+      per[b.evId] = (per[b.evId] || 0) + effLen(b);
+      name[b.evId] = b.evTitle || 'Event';
+    });
+  }
+  return Object.keys(per)
+    .map(id => ({ title: name[id], slots: per[id] }))
+    .sort((a, b) => b.slots - a.slots || a.title.localeCompare(b.title));
+}
 </script>
 <script>
 /* ---- 04-day.js ---- */
@@ -1077,8 +1422,10 @@ const minLabel = m => { const h = Math.floor(m / 60) % 24, mm = m % 60; const ap
 function div(cls, txt) { const d = document.createElement('div'); if (cls) d.className = cls; if (txt != null) d.textContent = txt; return d; }
 
 function renderAll() {
-  renderRail(); renderDateNav();
+  syncEventsOn(cur);
+  renderRail(); renderDateNav(); renderAgenda();
   if (!$('#viewDay').hidden) renderDay();
+  else if (!$('#viewWeek').hidden) renderQuotasList();
   else if (!$('#viewCal').hidden) renderCal();
   else if (!$('#viewTasks').hidden) renderTasks();
   else renderStats();
@@ -1094,10 +1441,16 @@ function renderRail() {
   const tb = taskBlocks(d);
   const done = tb.filter(b => b.done).length;
   $('#stBlocks').textContent = done + '/' + tb.length;
-  $('#stBooked').textContent = bookedSlots(d) ? durLabel(bookedSlots(d)) : '0h';
+  const eff = bookedSlots(d), raw = rawBooked(d);
+  $('#stBooked').textContent = eff ? durLabel(eff) : '0h';
+  $('#stBooked').parentNode.title = raw !== eff
+    ? durLabel(raw) + ' on the timeline, ' + durLabel(eff) + ' after F/U/D adjustments'
+    : 'time that counts';
   const rk = dayRank(d);
+  const ed = dayEdges(d);
   $('#stRank').textContent = rk ? rk.toFixed(1) : '0';
-  $('#stRank').parentNode.title = durLabel(bookedSlots(d)) + ' booked of ' + DAY_HOURS + 'h';
+  $('#stRank').parentNode.title = durLabel(eff) + ' of the ' + durLabel(windowSlots(d)) +
+    ' window (' + slotLabel(ed.sod) + '–' + slotLabel(ed.eod % SLOTS) + ')';
   $('#stGold').textContent = dayGold(d).toLocaleString();
   $('#stGold').parentNode.title = 'score ' + sc + ' × rank ' + rk.toFixed(1);
   $('#stStreak').textContent = computeStreak();
@@ -1110,6 +1463,9 @@ function renderRail() {
       : left ? gradedScore(d) + ' on what you graded · ' + left + ' left'
         : 'whole day graded';
   $('#btnSound').textContent = S.settings.sound ? '♪' : '✕';
+  const past = isPastDay(cur);
+  $('#btnQuick').disabled = past;
+  $('#btnQuick').title = past ? 'past days are archived' : '';
 
   const pend = pendingBlocks();
   const gb = $('#btnGrade');
@@ -1137,97 +1493,96 @@ function renderDateNav() {
   fitDateNav();
 }
 
-/* the date selector ends where the CALENDAR tab above it ends. measured rather
-   than hard-coded, so it still lines up whatever the font does. */
-function fitDateNav() {
-  const cal = $('.tab[data-view="cal"]'), dn = $('#viewDay .datenav');
-  if (!cal || !dn || $('#viewDay').hidden) return;
-  dn.style.width = '';
-  const w = Math.round(cal.getBoundingClientRect().right - dn.getBoundingClientRect().left);
-  if (w > 140) dn.style.width = w + 'px';
+/* Every date-nav-style bar (DAILY's today bar, QUOTAS' date-range bar,
+   CALENDAR's month bar) ends exactly where some tab button above it ends —
+   measured rather than hard-coded, so it still lines up whatever the font
+   does. `el` is always the first item in its toolbar, so its own left edge
+   already coincides with the tab row's left edge; only the right edge needs
+   fitting. */
+function fitNavBar(el, tab, view) {
+  if (!el || !tab || !view || view.hidden) return;
+  el.style.width = '';
+  const w = Math.round(tab.getBoundingClientRect().right - el.getBoundingClientRect().left);
+  if (w > 140) el.style.width = w + 'px';
+}
+function fitDateNav() { fitNavBar($('#viewDay .datenav'), $('.tab[data-view="week"]'), $('#viewDay')); }
+function fitQuotaNav() { fitNavBar($('#quotaNav'), $('.tab[data-view="tasks"]'), $('#viewWeek')); }
+function fitMonthNav() { fitNavBar($('#monthNav'), $('.tab[data-view="tasks"]'), $('#viewCal')); }
+function fitAllNavBars() { fitDateNav(); fitQuotaNav(); fitMonthNav(); }
+
+/* ---------------- THE DAY ----------------
+   Rows are no longer a uniform height: everything outside the day's working
+   window is collapsed to 0px by default (hidden, not squeezed) and only
+   opens to full height when its SOD/EOD marker is clicked. That kills the
+   old "y / 22" arithmetic, so the grid publishes its geometry here and every
+   pixel calculation goes through slotY / slotAtY. */
+let GEO = { tops: [], h: [], sod: SOD_DEF, eod: EOD_DEF, total: 0 };
+let sodOpen = false, eodOpen = false;   // click a marker to reveal the hours beyond it
+
+function buildGeo(d) {
+  const e = dayEdges(d);
+  const h = new Array(SLOTS), tops = new Array(SLOTS + 1);
+  tops[0] = 0;
+  for (let i = 0; i < SLOTS; i++) {
+    h[i] = i < e.sod ? (sodOpen ? ROWH : 0) : i >= e.eod ? (eodOpen ? ROWH : 0) : ROWH;
+    tops[i + 1] = tops[i] + h[i];
+  }
+  GEO = { tops: tops, h: h, sod: e.sod, eod: e.eod, total: tops[SLOTS] };
+  return GEO;
+}
+function toggleEdge(which) {
+  if (which === 'sod') sodOpen = !sodOpen; else eodOpen = !eodOpen;
+  renderDay(); sfx('click');
+}
+/* pixel top of a (possibly fractional) slot */
+function slotY(f) {
+  const i = clamp(Math.floor(f), 0, SLOTS - 1);
+  return GEO.tops[i] + (f - i) * GEO.h[i];
+}
+/* which slot a pixel offset lands in */
+function slotAtY(y) {
+  const t = GEO.tops;
+  if (y <= 0) return 0;
+  for (let i = 0; i < SLOTS; i++) if (y < t[i + 1]) return i;
+  return SLOTS - 1;
 }
 
-/* ---------------- THE DAY ---------------- */
 function nowSlotFloat() { const n = new Date(); return (n.getHours() * 60 + n.getMinutes()) / 15; }
 
 function renderDay() {
-  const isList = S.settings.dayView === 'list';
-  $('#gridwrap').hidden = isList;
-  $('#listwrap').hidden = !isList;
-  $$('#viewDay .seg').forEach(s => s.classList.toggle('on', (s.dataset.dv === 'list') === isList));
-  if (isList) renderList(); else renderTimeline();
+  renderTimeline();
+  renderDayStats();
 }
 
-/* ---- LIST: every booked block, top to bottom, nothing else ---- */
-function renderList() {
-  const L = $('#list'); L.innerHTML = '';
-  const d = dayOf(cur);
-  const nowM = new Date().getHours() * 60 + new Date().getMinutes();
-  const isToday = cur === todayStr();
-
-  const items = [];
-  d.blocks.forEach(b => items.push({ k: 'b', s: b.start * 15, e: (b.start + b.len) * 15, b: b }));
-  eventsOn(cur).filter(ev => !isPulled(cur, ev.id)).forEach(ev => items.push({ k: 'e', s: ev.s, e: ev.e, ev: ev }));
-  items.sort((x, y) => x.s - y.s || x.e - y.e);
-
-  const hdr = div('lhdr');
-  hdr.innerHTML = '<b>' + prettyD(cur) + '</b><span>' + items.length + ' ITEM' + (items.length === 1 ? '' : 'S') + '  ·  ' + (bookedSlots(d) ? durLabel(bookedSlots(d)) : '0m') + ' BOOKED</span>';
-  L.appendChild(hdr);
-
-  if (!items.length) {
-    const e = div('lempty', 'nothing booked — hit + BLOCK');
-    e.style.cursor = 'pointer';
-    e.onclick = () => openBlockEditor(null, isToday ? clamp(Math.floor(nowSlotFloat()), 0, 92) : 36, 4);
-    L.appendChild(e);
-    return;
-  }
-
-  let prevEnd = null;
-  items.forEach(it => {
-    if (prevEnd != null && it.s - prevEnd >= 15) {
-      const gs = prevEnd, ge = it.s;
-      const gap = div('lgap');
-      gap.innerHTML = '<i></i><span>' + durLabel((ge - gs) / 15) + ' free</span><i></i>';
-      gap.onclick = () => openBlockEditor(null, Math.floor(gs / 15), Math.max(1, (ge - gs) / 15));
-      L.appendChild(gap);
-    }
-    if (it.e > (prevEnd || 0)) prevEnd = it.e;
-
-    if (it.k === 'e') {
-      const r = div('lrow evt');
-      r.innerHTML = '<span class="tm">' + minLabel(it.s) + ' – ' + minLabel(it.e) + '</span>' +
-        '<span class="ti">' + esc(it.ev.title) + '</span>' +
-        '<span class="du">' + durLabel((it.e - it.s) / 15) + '</span>' +
-        '<span class="evtag">NOT PULLED</span>';
-      r.onclick = () => openTodayEvent(it.ev, false);
-      L.appendChild(r);
-      return;
-    }
-
-    const b = it.b;
-    if (isEvent(b)) {
-      const r = div('lrow evt');
-      r.innerHTML = '<span class="tm">' + slotLabel(b.start) + ' – ' + slotLabel(b.start + b.len) + '</span>' +
-        '<span class="ti">' + esc(taskLabel(b)) + (b.note ? '<em>' + esc(b.note) + '</em>' : '') + '</span>' +
-        '<span class="du">' + durLabel(b.len) + '</span>' +
-        '<span class="evtag">EVENT</span>';
-      r.onclick = () => openTodayEvent(b, true);
-      L.appendChild(r);
-      return;
-    }
-    const pending = isToday && !b.done && it.e <= nowM;
-    const nowRow = isToday && nowM >= it.s && nowM < it.e;
-    const r = div('lrow' + (b.done ? ' done' : '') + (pending ? ' pending' : '') + (nowRow ? ' nowrow' : ''));
-    r.style.setProperty('--c', C_BLOCK);
-    r.dataset.id = b.id;
-    r.innerHTML = '<span class="tm">' + slotLabel(b.start) + ' – ' + slotLabel(b.start + b.len) + '</span>' +
-      '<span class="ti">' + esc(taskLabel(b)) + (b.note ? '<em>' + esc(b.note) + '</em>' : '') + '</span>' +
-      '<span class="du">' + durLabel(b.len) + '</span>' +
-      (b.done
-        ? '<span class="gr outline" data-act="tick" style="background:' + colOf(b.grade) + '">' + b.grade + '</span>'
-        : '<span class="tick" data-act="tick" title="grade this block">✓</span>');
-    r.onclick = e => { if (e.target.dataset.act === 'tick') openGrade(b.id); else openBlockEditor(b.id); };
-    L.appendChild(r);
+/* ---- side panel: per-event + per-task DONE time, TODAY / WEEK split,
+   always for the real "today" (not whatever day `cur` is currently
+   viewing) — see the QUOTAS tab's own "THIS WEEK" for the deliberately-
+   different rolling-7-day reading. WEEK here is the Sunday–Saturday
+   calendar week containing today. Events (red) are their own group, sorted
+   most time first, always above tasks (blue, also sorted most time first)
+   — two bands, not one interleaved-by-time list (see doneEventBreakdownOn/
+   Week and doneTaskBreakdownOn/Week in 03-core.js for the grade-weighting
+   and inclusion rules, which differ slightly: events have no "done"
+   concept, so every existing event block counts). A period with nothing to
+   show gets a small empty-state line instead of an empty box. Display-only
+   — nothing here is clickable/editable. */
+function renderDayStats() {
+  const t = todayStr();
+  renderDnList('dnTodayList', doneEventBreakdownOn(t), doneTaskBreakdownOn(t));
+  renderDnList('dnWeekList', doneEventBreakdownWeek(t), doneTaskBreakdownWeek(t));
+}
+function renderDnList(id, evRows, taskRows) {
+  const L = $('#' + id); L.innerHTML = '';
+  if (!evRows.length && !taskRows.length) { L.appendChild(div('dnempty', 'nothing here yet')); return; }
+  evRows.forEach(r => {
+    const row = div('ttrow evt');
+    row.innerHTML = '<span class="nm">' + esc(r.title) + '</span><span class="amt">' + durLabel(r.slots) + '</span>';
+    L.appendChild(row);
+  });
+  taskRows.forEach(r => {
+    const row = div('ttrow');
+    row.innerHTML = '<span class="nm">' + esc(r.task.name) + '</span><span class="amt">' + durLabel(r.slots) + '</span>';
+    L.appendChild(row);
   });
 }
 
@@ -1235,22 +1590,42 @@ function renderTimeline() {
   const g = $('#grid'); g.innerHTML = '';
   const d = dayOf(cur);
   const f = document.createDocumentFragment();
+  const G = buildGeo(d);
+  g.style.gridTemplateRows = G.h.map(x => x + 'px').join(' ');
 
-  const lines = div('lines'); f.appendChild(lines);
+  /* rules and the dimmed out-of-hours bands, all drawn from the geometry */
+  const lines = div('lines');
+  if (G.sod > 0) {
+    const z = div('zone'); z.style.top = '0px'; z.style.height = G.tops[G.sod] + 'px'; lines.appendChild(z);
+  }
+  if (G.eod < SLOTS) {
+    const z = div('zone'); z.style.top = G.tops[G.eod] + 'px'; z.style.height = (G.total - G.tops[G.eod]) + 'px'; lines.appendChild(z);
+  }
+  for (let i = 0; i <= SLOTS; i++) {
+    if ((i < G.sod && !sodOpen) || (i >= G.eod && !eodOpen)) continue;   // collapsed — 0px, nothing to draw
+    const ln = div(i % 4 === 0 ? 'hline' : 'qline');
+    ln.style.top = G.tops[i] + 'px';
+    lines.appendChild(ln);
+  }
+  f.appendChild(lines);
 
   for (let h = 0; h < 24; h++) {
-    const tl = div('tl' + (h === 12 ? ' noon' : ''));
+    const tl = div('tl' + (h === 12 ? ' noon' : '') + (h * 4 < G.sod || h * 4 >= G.eod ? ' dim' : ''));
     tl.style.gridRow = (h * 4 + 1) + ' / span 4';
     tl.textContent = slotLabel(h * 4);
     f.appendChild(tl);
   }
 
-  const occ = occupancy(d, false);
-  for (let i = 0; i < SLOTS; i++) {
-    if (occ[i]) continue;
-    const c = div('cell'); c.style.gridRow = String(i + 1);
-    c.dataset.slot = String(i); c.dataset.t = slotLabel(i);
-    f.appendChild(c);
+  const sealed = isPastDay(cur);
+  g.classList.toggle('sealed', sealed);
+  if (!sealed) {
+    const occ = occupancy(d, false);
+    for (let i = 0; i < SLOTS; i++) {
+      if (occ[i]) continue;
+      const c = div('cell'); c.style.gridRow = String(i + 1);
+      c.dataset.slot = String(i); c.dataset.t = slotLabel(i);
+      f.appendChild(c);
+    }
   }
 
   const nowF = nowSlotFloat(), isToday = cur === todayStr();
@@ -1260,30 +1635,26 @@ function renderTimeline() {
     f.appendChild(el);
   });
 
-  if (!d.blocks.length) { const e = div('emptyday', 'empty deck — drag anywhere to deal a block'); f.appendChild(e); }
+  if (!d.blocks.length) {
+    const e = div('emptyday', sealed ? 'nothing was booked on this day' : 'empty deck — drag anywhere to deal a block');
+    e.style.top = slotY(G.sod + 8) + 'px';
+    f.appendChild(e);
+  }
 
-  /* event rail */
-  const rail = div('rail3'); rail.style.gridRow = '1 / -1';
-  const evs = eventsOn(cur).filter(ev => !isPulled(cur, ev.id));
-  const lanes = [];
-  evs.forEach(ev => {
-    let li = 0; while (lanes[li] != null && lanes[li] > ev.s) li++;
-    lanes[li] = ev.e;
-    const c = div('evc');
-    c.style.setProperty('--c', C_EVENT);
-    c.style.top = (ev.s / 15 * ROWH) + 'px';
-    c.style.height = Math.max(20, (ev.e - ev.s) / 15 * ROWH - 2) + 'px';
-    c.style.left = (8 + li * 10) + 'px';
-    c.style.zIndex = String(5 + li);
-    c.dataset.ev = ev.id;
-    c.innerHTML = '<b>' + esc(minLabel(ev.s)) + '</b>' + esc(ev.title);
-    rail.appendChild(c);
+  /* the working window's edges — click either badge to reveal (or re-hide)
+     the hours beyond it. Icon sits at the left of the line, like the now-line's. */
+  [['SOD', G.sod, 'sod', sodOpen], ['EOD', G.eod, 'eod', eodOpen]].forEach(pair => {
+    const m = div('edge');
+    m.dataset.edge = pair[2];
+    m.style.top = slotY(pair[1]) + 'px';
+    m.innerHTML = '<b class="outline" data-act="toggle">' + pair[0] + (pair[3] ? ' ▾' : ' ▸') + '</b><i></i>';
+    m.title = (pair[0] === 'SOD' ? 'start of day — ' + slotLabel(G.sod) : 'end of day — ' + slotLabel(G.eod % SLOTS)) +
+      '  ·  click to ' + (pair[3] ? 'hide' : 'show') + ' the hours ' + (pair[0] === 'SOD' ? 'before' : 'after') + ' it';
+    f.appendChild(m);
   });
-  if (!evs.length) { const n = div('', 'no events to pull'); n.style.cssText = 'position:absolute;top:8px;left:10px;font-size:10px;opacity:.4;font-weight:800;letter-spacing:1px;line-height:1.3'; rail.appendChild(n); }
-  f.appendChild(rail);
 
   if (isToday) {
-    const nl = div('nowline'); nl.style.top = (nowF * ROWH) + 'px';
+    const nl = div('nowline'); nl.style.top = slotY(nowF) + 'px';
     nl.innerHTML = '<i></i><b class="outline">' + esc(minLabel(new Date().getHours() * 60 + new Date().getMinutes())) + '</b>';
     f.appendChild(nl);
   }
@@ -1295,7 +1666,8 @@ function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ 
 
 function blockEl(b, isNow) {
   const ev = isEvent(b);
-  const el = div('blk' + (b.len < 2 ? ' tiny' : '') + (!ev && b.done ? ' done' : '') + (isNow ? ' now' : '') + (ev ? ' evt' : ''));
+  const sealed = isPastDay(cur);
+  const el = div('blk' + (b.len < 2 ? ' tiny' : '') + (!ev && b.done ? ' done' : '') + (isNow ? ' now' : '') + (ev ? ' evt' : '') + (sealed ? ' locked' : ''));
   el.style.gridRow = (b.start + 1) + ' / span ' + b.len;
   el.style.setProperty('--c', ev ? C_EVENT : C_BLOCK);
   el.dataset.id = b.id;
@@ -1304,29 +1676,28 @@ function blockEl(b, isNow) {
   /* the note earns a line of its own once the block is tall enough to hold it */
   if (b.note && b.len >= 3) el.appendChild(div('note', b.note));
   if (ev) {
-    const tag = div('evtagt', 'EVENT');
-    el.appendChild(tag);
+    el.appendChild(div('evtagt', 'EVENT'));
   } else if (b.done) {
     const gr = div('grade outline', b.grade);
     gr.style.background = colOf(b.grade);
-    gr.dataset.act = 'tick';
+    if (!sealed) gr.dataset.act = 'tick';
     el.appendChild(gr);
   } else {
     const tk = div('tick', '✓'); tk.dataset.act = 'tick'; tk.title = 'grade this block';
     el.appendChild(tk);
   }
-  const rz = div('rz'); rz.dataset.act = 'rz'; el.appendChild(rz);
+  if (!sealed) { const rz = div('rz'); rz.dataset.act = 'rz'; el.appendChild(rz); }
   return el;
 }
 
 /* ---------------- painting & dragging ---------------- */
 let paint = null, resizing = null;
-function slotFromEvent(e) { const r = $('#grid').getBoundingClientRect(); return clamp(Math.floor((e.clientY - r.top) / ROWH), 0, SLOTS - 1); }
+function slotFromEvent(e) { const r = $('#grid').getBoundingClientRect(); return slotAtY(e.clientY - r.top); }
 function preview(a, b) {
   let p = $('#pv');
   if (!p) { p = div('paintpv'); p.id = 'pv'; p.innerHTML = '<b></b>'; $('#grid').appendChild(p); }
   const s = Math.min(a, b), e = Math.max(a, b) + 1;
-  p.style.top = (s * ROWH) + 'px'; p.style.height = (e - s) * ROWH + 'px';
+  p.style.top = slotY(s) + 'px'; p.style.height = (slotY(e) - slotY(s)) + 'px';
   p.querySelector('b').textContent = slotLabel(s) + ' – ' + slotLabel(e) + '  (' + durLabel(e - s) + ')';
   return [s, e];
 }
@@ -1336,13 +1707,16 @@ function bindGrid() {
   const g = $('#grid');
   g.addEventListener('pointerdown', e => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
+    const edgeB = e.target.closest('.edge b[data-act="toggle"]');
+    if (edgeB) { e.preventDefault(); toggleEdge(edgeB.closest('.edge').dataset.edge); return; }
     const bEl = e.target.closest('.blk');
     if (bEl) {
       const bb = findBlock(cur, bEl.dataset.id);
       const act = e.target.dataset.act;
-      if (bb && isEvent(bb) && act !== 'rz') { e.preventDefault(); openTodayEvent(bb, true); return; }
+      if (bb && isEvent(bb) && act !== 'rz') { e.preventDefault(); openTodayEvent(bb); return; }
       if (act === 'tick') { e.preventDefault(); openGrade(bEl.dataset.id); return; }
       if (act === 'rz') {
+        if (isPastDay(cur)) return;
         e.preventDefault();
         const b = findBlock(cur, bEl.dataset.id);
         if (b) { resizing = { id: b.id, start: b.start, len: b.len }; g.setPointerCapture(e.pointerId); preview(b.start, b.start + b.len - 1); }
@@ -1350,8 +1724,7 @@ function bindGrid() {
       }
       openBlockEditor(bEl.dataset.id); return;
     }
-    const evEl = e.target.closest('.evc');
-    if (evEl) { const ev = eventsOn(cur).find(x => x.id === evEl.dataset.ev); if (ev) openTodayEvent(ev, false); return; }
+    if (isPastDay(cur)) return;
     const cell = e.target.closest('.cell'); if (!cell) return;
     const slot = +cell.dataset.slot;
     if (e.pointerType !== 'mouse') { openBlockEditor(null, slot, Math.min(4, SLOTS - slot)); return; }
@@ -1421,7 +1794,8 @@ function taskOptions(sel) {
 
 function openBlockEditor(id, start, len) {
   const b = id ? findBlock(cur, id) : null;
-  if (b && isEvent(b)) { openTodayEvent(b, true); return; }
+  if (b && isEvent(b)) { openTodayEvent(b); return; }
+  if (isPastDay(cur)) { if (b) openArchivedBlock(b); else toast('Past days are archived'); return; }
   const st = b ? b.start : start, ln = b ? b.len : (len || 4);
   const sel = b ? b.taskId : (S.tasks.filter(t => !t.hidden).length === 1 ? S.tasks.filter(t => !t.hidden)[0].id : '');
   openModal(
@@ -1481,45 +1855,47 @@ function openBlockEditor(id, start, len) {
   M.querySelector('[data-x]').onclick = closeModal;
 }
 
-/* An event seen from TODAY. Everything about it is owned by the CALENDAR tab,
-   so here it is read-only: you may only pull it into the day or cancel it.
-   `pulled` = we are looking at an event block that is already on the timeline. */
-function openTodayEvent(evOrBlock, pulled) {
-  const isBlk = pulled;
-  const title = isBlk ? (evOrBlock.evTitle || 'Event') : evOrBlock.title;
-  const note = evOrBlock.note || '';
-  const evId = isBlk ? evOrBlock.evId : evOrBlock.id;
-  const base = S.events.find(e => e.id === evId);
-  const timeTxt = isBlk
-    ? slotLabel(evOrBlock.start) + ' – ' + slotLabel(evOrBlock.start + evOrBlock.len)
-    : minLabel(evOrBlock.s) + ' – ' + minLabel(evOrBlock.e);
+/* A block on a day that has already ended: look, don't touch. */
+function openArchivedBlock(b) {
+  const g = gradeOf(b.grade);
+  openModal(
+    '<h3>🔒 ARCHIVED<button class="btn sm x" data-x>✕</button></h3>' +
+    '<div class="field"><label>TASK</label><input class="inp ro" value="' + esc(taskLabel(b)) + '" readonly></div>' +
+    '<div class="field"><label>WHEN</label><input class="inp ro" value="' + esc(rangeLabel(b.start, b.len)) + '" readonly></div>' +
+    (b.note ? '<div class="field"><label>NOTE</label><textarea class="inp ro" readonly>' + esc(b.note) + '</textarea></div>' : '') +
+    '<div class="li"><span>Grade</span><span class="amt" style="color:' + g.color + '">' + g.g + ' — ' + g.label + '</span></div>' +
+    '<div class="li" style="margin-top:6px"><span>Counts toward the day at</span><span class="amt">' + g.pts + '%</span></div>' +
+    '<div class="hint" style="margin-top:10px">' + prettyD(cur) + ' is over, so this is a record now — grades, times and notes are fixed. Today is still fully editable, even hours that have already passed.</div>' +
+    '<div class="modrow"><div class="spacer"></div><button class="btn gold" data-x>CLOSE</button></div>'
+  );
+  $('#modal').querySelectorAll('[data-x]').forEach(x => x.onclick = closeModal);
+}
+
+/* An event block seen from DAILY. Every event is always a block now — no more
+   "pull" step — so this is purely read-only: rename/retime/repeat happen in
+   CALENDAR, the only thing DAILY can do is cancel it. */
+function openTodayEvent(b) {
+  const base = S.events.find(e => e.id === b.evId);
+  const timeTxt = slotLabel(b.start) + ' – ' + slotLabel(b.start + b.len);
   openModal(
     '<h3>EVENT<button class="btn sm x" data-x>✕</button></h3>' +
-    '<div class="field"><label>EVENT</label><input class="inp ro" value="' + esc(title) + '" readonly></div>' +
-    '<div class="field"><label>NOTE</label><textarea class="inp ro" readonly>' + esc(note) + '</textarea></div>' +
+    '<div class="field"><label>EVENT</label><input class="inp ro" value="' + esc(b.evTitle || 'Event') + '" readonly></div>' +
+    '<div class="field"><label>NOTE</label><textarea class="inp ro" readonly>' + esc(b.note || '') + '</textarea></div>' +
     '<div class="hint" style="margin-bottom:6px">' + timeTxt + ' · ' + prettyD(cur) +
-    '<br>Events are owned by the calendar — rename, retime or change the repeat over there.</div>' +
+    '<br>Events are owned by CALENDAR — rename, retime or change the repeat over there.</div>' +
     '<div class="modrow"><button class="btn red" data-cancel>CANCEL</button>' +
-    '<div class="spacer"></div>' +
-    (isBlk ? '<button class="btn" data-x>CLOSE</button>' : '<button class="btn green" data-pull>PULL</button>') +
-    '</div>'
+    '<div class="spacer"></div><button class="btn" data-x>CLOSE</button></div>'
   );
   const M = $('#modal');
   M.querySelectorAll('[data-x]').forEach(x => x.onclick = closeModal);
-  const pl = M.querySelector('[data-pull]');
-  if (pl) pl.onclick = () => {
-    pushUndo();
-    addEventBlock(cur, evOrBlock);
-    save(); closeModal(); renderAll(); sfx('place'); toast('Pulled into the day');
-  };
   M.querySelector('[data-cancel]').onclick = () => {
+    if (isPastDay(cur)) { toast('Past days are archived'); return; }
     pushUndo();
-    const d = getDay(cur);
-    d.blocks = d.blocks.filter(x => x.evId !== evId);      // drop the pulled block, if any
     if (base) {
       if (isRepeating(base)) base.skip = (base.skip || []).concat([cur]);
-      else S.events = S.events.filter(e => e.id !== evId);
+      else S.events = S.events.filter(e => e.id !== b.evId);
     }
+    syncAllEventBlocks();
     save(); closeModal(); renderAll(); sfx('back');
     toast(base && isRepeating(base) ? 'Cancelled just today' : 'Event cancelled');
   };
@@ -1528,7 +1904,8 @@ function openTodayEvent(evOrBlock, pulled) {
 /* ---------------- grading ---------------- */
 function openGrade(id) {
   const b = findBlock(cur, id); if (!b) return;
-  if (isEvent(b)) { openTodayEvent(b, true); return; }
+  if (isEvent(b)) { openTodayEvent(b); return; }
+  if (isPastDay(cur)) { openArchivedBlock(b); return; }
   if (b.done) { openBlockEditor(id); return; }
   openModal(
     '<h3>HOW DID IT GO?<button class="btn sm x" data-x>✕</button></h3>' +
@@ -1593,6 +1970,91 @@ function burst(color, n) {
 <script>
 /* ---- 05-views.js ---- */
 "use strict";
+/* ---------------- QUOTAS ----------------
+   A flat list over a 7-day sliding window anchored at `quotaAnchor` (default:
+   today), one horizontal separator per day. `‹`/`›` shift the window ±7 days;
+   THIS WEEK resets it back to today..today+6. A quota is a homework/milestone
+   checklist item pinned to one date — never a Task, never instantiated into a
+   block. This tab used to be called WEEKLY and show a 7-day grid with a
+   DEADLINES/QUOTAS selector; that grid and the old per-task-per-day quota
+   feature are gone for good — see CONTEXT.md §8/§13 for the history. What was
+   called a "deadline" is what this tab now calls a quota. */
+function quotaDays() { return Array.from({ length: 7 }, (_, i) => shiftD(quotaAnchor, i)); }
+function renderQuotasList() {
+  const t = todayStr();
+  const days = quotaDays();
+  $('#qLabel').textContent = quotaRangeLabel(days);
+  const wrap = $('#quotaList'); wrap.innerHTML = '';
+  days.forEach(ds => {
+    const sep = div('qsep');
+    sep.dataset.d = ds;
+    const label = ds === t ? 'TODAY' : ds === shiftD(t, 1) ? 'TOMORROW' : prettyD(ds);
+    sep.innerHTML = '<span class="ln"></span><span class="lbl">' + label + '</span><span class="ln"></span><span class="plus">+</span>';
+    wrap.appendChild(sep);
+    quotasOn(ds).forEach(it => {
+      const row = div('qrow' + (it.done ? ' done' : ''));
+      row.dataset.id = it.id;
+      row.innerHTML = '<span class="tx">' + esc(it.text) + '</span>';
+      wrap.appendChild(row);
+    });
+  });
+}
+
+/* naming a new quota — a minimal prompt, not the full editor. Called with a
+   fixed date from clicking a day's separator, or with no date (the +QUOTA
+   toolbar button) in which case a day picker is shown, defaulting to the
+   first day of the window currently on screen. */
+function openNewQuota(ds) {
+  const t = todayStr();
+  const days = ds ? null : quotaDays();
+  const dayLabel = d => d === t ? 'TODAY' : d === shiftD(t, 1) ? 'TOMORROW' : prettyD(d);
+  openModal(
+    '<h3>NEW QUOTA<button class="btn sm x" data-x>✕</button></h3>' +
+    (ds
+      ? '<div class="field"><label>' + esc(prettyD(ds)) + '</label></div>'
+      : '<div class="field"><label>DAY</label><select class="inp" id="qDay">' +
+        days.map(d => '<option value="' + d + '">' + dayLabel(d) + '</option>').join('') + '</select></div>') +
+    '<div class="field"><label>QUOTA</label><input class="inp" id="qName" data-autofocus placeholder="e.g. Problem set 4 due"></div>' +
+    '<div class="modrow"><div class="spacer"></div><button class="btn green" data-add>ADD</button></div>'
+  );
+  const M = $('#modal');
+  M.querySelector('[data-x]').onclick = closeModal;
+  const commit = () => {
+    const el = M.querySelector('#qName'), v = el.value.trim();
+    if (!v) { el.focus(); return; }
+    const day = ds || M.querySelector('#qDay').value;
+    pushUndo(); addQuota(day, v); save(); closeModal();
+    renderQuotasList(); renderRailQuotas();
+    sfx('place');
+  };
+  M.querySelector('[data-add]').onclick = commit;
+  M.querySelector('#qName').addEventListener('keydown', e => { if (e.key === 'Enter') commit(); });
+}
+
+/* the full editor for an EXISTING quota: rename, note, complete/uncomplete, delete */
+function openQuotaEditor(id) {
+  const it = S.quotas.find(x => x.id === id); if (!it) return;
+  openModal(
+    '<h3>' + esc(prettyD(it.date)) + '<button class="btn sm x" data-x>✕</button></h3>' +
+    '<div class="field"><label>QUOTA</label><input class="inp" id="qT" data-autofocus value="' + esc(it.text) + '"></div>' +
+    '<div class="field"><label>NOTE</label><textarea class="inp" id="qN" placeholder="details…">' + esc(it.note || '') + '</textarea></div>' +
+    '<div class="modrow"><button class="btn red" data-del title="delete">🗑</button><div class="spacer"></div>' +
+    '<button class="btn ' + (it.done ? '' : 'green') + '" data-toggle>' + (it.done ? 'UNCOMPLETE' : 'COMPLETE') + '</button></div>'
+  );
+  const M = $('#modal');
+  const commitEdits = () => {
+    const v = M.querySelector('#qT').value.trim();
+    if (v) it.text = v;
+    it.note = M.querySelector('#qN').value;
+  };
+  const refresh = () => { renderQuotasList(); renderRailQuotas(); };
+  M.querySelector('[data-x]').onclick = () => { pushUndo(); commitEdits(); save(); closeModal(); refresh(); };
+  M.querySelector('[data-del]').onclick = () => { pushUndo(); deleteQuota(it.id); save(); closeModal(); refresh(); sfx('back'); };
+  M.querySelector('[data-toggle]').onclick = () => {
+    pushUndo(); commitEdits(); toggleQuota(it.id); save(); closeModal(); refresh(); sfx(it.done ? 'score' : 'back');
+  };
+}
+
 /* ---------------- CALENDAR ---------------- */
 function renderCal() {
   $('#mLabel').textContent = MON[calM.getMonth()].toUpperCase() + ' ' + calM.getFullYear();
@@ -1603,39 +2065,102 @@ function renderCal() {
   for (let i = 0; i < 42; i++) {
     const dt = new Date(start); dt.setDate(start.getDate() + i);
     const ds = fmtD(dt);
+    syncEventsOn(ds);
     const d = dayOf(ds), evs = eventsOn(ds);
     const cell = div('day' + (dt.getMonth() !== calM.getMonth() ? ' out' : '') + (ds === t ? ' today' : '') + (ds === cur ? ' sel' : ''));
     cell.dataset.d = ds;
     const planned = d.blocks.reduce((a, b) => a + b.len, 0);
+    const qs = quotasOn(ds), doneQ = qs.filter(x => x.done).length;
+    cell.title = durLabel(bookedSlots(d)) + ' of a ' + durLabel(windowSlots(d)) + ' day  ·  rank ' + dayRank(d).toFixed(1) + ' / 10' +
+      (qs.length ? '  ·  ' + doneQ + '/' + qs.length + ' quotas done' : '');
     const n = div('n');
     const scv = gradedSlots(d) ? dayScore(d) : null;
     n.innerHTML = '<span>' + dt.getDate() + '</span>' + (scv != null ? '<em>' + scv + '</em>' : (d.blocks.length ? '<em style="opacity:.45;color:#9fb0ad">' + d.blocks.length + ' blk</em>' : ''));
     cell.appendChild(n);
-    evs.slice(0, 3).forEach(ev => {
+    const ordered = calOrder(evs);
+    ordered.slice(0, 3).forEach(ev => {
       const e = div('ev', minLabel(ev.s) + ' ' + ev.title);
-      e.style.background = C_EVENT; cell.appendChild(e);
+      e.style.background = isRepeating(ev) ? C_EVENT : C_ONEOFF;
+      cell.appendChild(e);
     });
-    if (evs.length > 3) cell.appendChild(div('more', '+' + (evs.length - 3) + ' more'));
+    if (ordered.length > 3) cell.appendChild(div('more', '+' + (ordered.length - 3) + ' more'));
     if (scv != null && scv >= 80) { const w = div('won', '♠'); w.style.color = '#ffc93d'; cell.appendChild(w); }
     const fill = div('fill'); const fi = document.createElement('i');
-    fi.style.width = clamp(planned / 64 * 100, 0, 100) + '%';
-    fi.style.background = (scv != null && scv >= 80) ? 'var(--green)' : 'var(--chip)';
+    /* this bar is QUOTA COMPLETION: fraction of that day's quotas marked done.
+       No quotas at all → empty track (just the neutral grey .fill shows).
+       Quotas exist but none done yet → a small visible sliver, so the day
+       still reads as "something is due here". Fully done → green. */
+    fi.style.width = (qs.length ? Math.max(doneQ / qs.length * 100, 8) : 0) + '%';
+    fi.style.background = (qs.length && doneQ === qs.length) ? 'var(--green)' : 'var(--chip)';
     fill.appendChild(fi); cell.appendChild(fill);
     g.appendChild(cell);
   }
-  /* agenda */
+}
+
+/* UPCOMING lives in the rail so it is visible from every tab. Just the one
+   nearest event that hasn't started yet (see nextUpcomingEvent) — one-offs
+   are green here too, matching the calendar grid. */
+function renderAgenda() {
   const a = $('#agenda'); a.innerHTML = '';
-  const up = upcoming(t, 60, 8);
-  const h = document.createElement('h4'); h.textContent = 'NEXT UP'; a.appendChild(h);
-  if (!up.length) { const e = div('hint', 'No upcoming events. Hit + NEW EVENT.'); a.appendChild(e); }
-  up.forEach(ev => {
+  const t = todayStr();
+  const ev = nextUpcomingEvent(t);
+  if (!ev) { a.appendChild(div('hint', 'Nothing coming up.')); }
+  else {
     const r = div('agrow'); r.dataset.ev = ev.id; r.dataset.on = ev.on;
-    const dot = div('dot'); dot.style.background = C_EVENT;
+    const dot = div('dot'); dot.style.background = isRepeating(ev) ? C_EVENT : C_ONEOFF;
     const w = div('w');
-    w.innerHTML = '<b>' + esc(ev.title) + (isRepeating(ev) ? ' <span style="opacity:.5;font-size:10px">↻</span>' : '') + '</b><span>' +
-      prettyD(ev.date) + '  ·  ' + minLabel(ev.s) + '–' + minLabel(ev.e) + (isRepeating(ev) ? '  ·  ' + repName(ev.rep).toLowerCase() : '') + '</span>';
+    const when = ev.date === t ? 'TODAY' : ev.date === shiftD(t, 1) ? 'TOMORROW' : prettyD(ev.date);
+    w.innerHTML = '<b>' + esc(ev.title) + (isRepeating(ev) ? ' <span style="opacity:.5;font-size:10px">↻</span>' : '') + '</b>' +
+      '<span>' + when + '  ·  ' + minLabel(ev.s) + '–' + minLabel(ev.e) + '</span>';
     r.appendChild(dot); r.appendChild(w);
     a.appendChild(r);
+  }
+  renderRailQuotas();
+  fitAgenda();
+}
+
+/* QUOTAS lives just below UPCOMING in the rail, today's items only. */
+/* Today's and tomorrow's quotas both show here — a quota pinned to a date is
+   due BY that date, so seeing tomorrow's a day early is the point (same
+   reasoning as a deadline: you want the heads-up before it's due, not on
+   the morning of). Each day gets its own small label only when there's
+   something under it, so a quiet tomorrow doesn't print an empty header. */
+function renderRailQuotas() {
+  const q = $('#railQuotas'); if (!q) return;
+  q.innerHTML = '';
+  const t = todayStr(), tmrw = shiftD(t, 1);
+  const today = quotasOn(t), tomorrow = quotasOn(tmrw);
+  if (!today.length && !tomorrow.length) { q.appendChild(div('hint', 'Nothing due today or tomorrow.')); return; }
+  const addGroup = (label, items) => {
+    if (!items.length) return;
+    q.appendChild(div('railqlbl', label));
+    items.forEach(it => {
+      const row = div('qrow' + (it.done ? ' done' : ''));
+      row.dataset.id = it.id;
+      row.innerHTML = '<span class="tx">' + esc(it.text) + '</span>';
+      q.appendChild(row);
+    });
+  };
+  addGroup('TODAY', today);
+  addGroup('TOMORROW', tomorrow);
+}
+
+/* UPCOMING's one row is fixed; QUOTAS can be any length, so it's the one
+   that gives ground — drop rows off its bottom until the rail fits its
+   column exactly, then drop any group label left with nothing under it
+   (TOMORROW's label if every one of its rows got trimmed away). Same
+   "must never scroll" rule as before. */
+function fitAgenda() {
+  const rail = $('.rail'), q = $('#railQuotas');
+  if (!rail || !q) return;
+  let rows = q.querySelectorAll('.qrow');
+  while (rows.length > 0 && rail.scrollHeight > rail.clientHeight + 1) {
+    rows[rows.length - 1].remove();
+    rows = q.querySelectorAll('.qrow');
+  }
+  q.querySelectorAll('.railqlbl').forEach(l => {
+    const n = l.nextElementSibling;
+    if (!n || n.classList.contains('railqlbl')) l.remove();
   });
 }
 
@@ -1649,49 +2174,138 @@ function openEventEditor(id, dateDefault, onDate) {
   const ds = ev ? ev.date : (dateDefault || cur);
   const occ = onDate || ds;   // which occurrence was clicked, for repeating events
   const rep = ev ? (ev.rep || 'none') : 'none';
+  /* An occurrence that has already happened is part of the record. Only the
+     note stays editable — and a note is one field shared by the whole series,
+     which is a deliberate simplification. */
+  const sealed = !!ev && isPastDay(occ);
+  const ro = sealed ? ' readonly disabled' : '';
+  const cls = sealed ? ' ro' : '';
   openModal(
-    '<h3>' + (ev ? '✎ EDIT EVENT' : '＋ NEW EVENT') + '<button class="btn sm x" data-x>✕</button></h3>' +
-    '<div class="field"><label>TITLE</label><input class="inp" id="eT" data-autofocus value="' + esc(ev ? ev.title : '') + '" placeholder="Standup / 1:1 / dentist…"></div>' +
-    '<div class="field"><label>' + (isRepeating(ev) ? 'FIRST DATE' : 'DATE') + '</label><input class="inp" type="date" id="eD" value="' + ds + '"></div>' +
-    '<div class="two"><div class="field"><label>START</label><select class="inp" id="eS">' + minOptions(ev ? ev.s : 540) + '</select></div>' +
-    '<div class="field"><label>END</label><select class="inp" id="eE">' + minOptions(ev ? ev.e : 600) + '</select></div></div>' +
-    '<div class="field"><label>REPEAT</label><select class="inp" id="eR">' +
-    REPEATS.map(r => '<option value="' + r.id + '"' + (r.id === rep ? ' selected' : '') + '>' + r.name + '</option>').join('') +
-    '</select></div>' +
-    '<div class="field" id="untilWrap"' + (rep === 'none' ? ' hidden' : '') + '><label>REPEAT UNTIL  (blank = forever)</label>' +
-    '<input class="inp" type="date" id="eU" value="' + (ev && ev.until ? ev.until : '') + '"></div>' +
-    '<div class="field"><label>NOTE</label><textarea class="inp" id="eN" placeholder="link, room, agenda…">' + esc(ev ? ev.note : '') + '</textarea></div>' +
-    (isRepeating(ev) ? '<div class="hint" style="margin-bottom:8px">Editing changes every occurrence of this event.</div>' : '') +
+    '<h3>' + (sealed ? '🔒 PAST EVENT' : ev ? '✎ EDIT EVENT' : '＋ NEW EVENT') + '<button class="btn sm x" data-x>✕</button></h3>' +
+    '<div class="field"><label>TITLE</label><input class="inp' + cls + '" id="eT" ' + (sealed ? '' : 'data-autofocus ') + 'value="' + esc(ev ? ev.title : '') + '" placeholder="Standup / 1:1 / dentist…"' + ro + '></div>' +
+    (sealed ? '' :
+      '<div class="field"><label>' + (isRepeating(ev) ? 'FIRST DATE' : 'DATE') + '</label><input class="inp" type="date" id="eD" value="' + ds + '"></div>' +
+      '<div class="two"><div class="field"><label>START</label><select class="inp" id="eS">' + minOptions(ev ? ev.s : 540) + '</select></div>' +
+      '<div class="field"><label>END</label><select class="inp" id="eE">' + minOptions(ev ? ev.e : 600) + '</select></div></div>' +
+      '<div class="field"><label>REPEAT</label><select class="inp" id="eR">' +
+      REPEATS.map(r => '<option value="' + r.id + '"' + (r.id === rep ? ' selected' : '') + '>' + r.name + '</option>').join('') +
+      '</select></div>' +
+      '<div class="field" id="untilWrap"' + (rep === 'none' ? ' hidden' : '') + '><label>REPEAT UNTIL  (blank = forever)</label>' +
+      '<input class="inp" type="date" id="eU" value="' + (ev && ev.until ? ev.until : '') + '"></div>') +
+    (sealed ? '<div class="field"><label>WHEN</label><input class="inp ro" value="' + esc(prettyD(occ) + '  ·  ' + minLabel(ev.s) + '–' + minLabel(ev.e)) + '" readonly></div>' : '') +
+    '<div class="field"><label>NOTE' + (sealed ? '  (the one field you can still change)' : '') + '</label>' +
+    '<textarea class="inp" id="eN" placeholder="link, room, agenda…">' + esc(ev ? ev.note : '') + '</textarea></div>' +
+    (sealed ? '<div class="hint" style="margin-bottom:8px">' + prettyD(occ) + ' has passed, so the time and title are fixed. Editing the note changes it on every occurrence of this event.</div>'
+      : isRepeating(ev) ? '<div class="hint" style="margin-bottom:8px">Changing the time or title will ask whether that applies to just ' + prettyD(occ) + ' or to it and every occurrence after — nothing before ' + prettyD(occ) + ' is ever touched. A note-only change still applies to the whole series.</div>' : '') +
     '<div class="modrow">' +
-    (ev && isRepeating(ev) ? '<button class="btn sm red" data-skip>SKIP ' + prettyD(occ) + '</button><button class="btn sm red" data-del>DELETE ALL</button>'
-      : ev ? '<button class="btn red" data-del>DELETE</button>' : '') +
-    '<div class="spacer"></div><button class="btn green" data-save>' + (ev ? 'SAVE' : 'ADD EVENT') + '</button></div>'
+    (sealed ? ''
+      : ev && isRepeating(ev)
+        ? '<button class="btn sm red" data-skip>SKIP ' + prettyD(occ) + '</button>' +
+          '<button class="btn sm red" data-end>END AFTER THIS DAY</button>'
+        : ev ? '<button class="btn red" data-del>DELETE</button>' : '') +
+    '<div class="spacer"></div><button class="btn green" data-save>' + (sealed ? 'SAVE NOTE' : ev ? 'SAVE' : 'ADD EVENT') + '</button></div>'
   );
   const M = $('#modal');
-  M.querySelector('#eR').onchange = () => { M.querySelector('#untilWrap').hidden = M.querySelector('#eR').value === 'none'; };
+  const rsel = M.querySelector('#eR');
+  if (rsel) rsel.onchange = () => { M.querySelector('#untilWrap').hidden = rsel.value === 'none'; };
+
   const sk = M.querySelector('[data-skip]');
   if (sk) sk.onclick = () => {
     pushUndo();
     ev.skip = (ev.skip || []).concat([occ]);
-    save(); closeModal(); renderAll(); sfx('back'); toast('Skipped just that day');
+    syncAllEventBlocks();
+    save(); closeModal(); renderAll(); sfx('back');
+    toast('Skipped just that day — its block is gone too');
   };
+  /* stop the series here: this occurrence survives, everything later goes */
+  const en = M.querySelector('[data-end]');
+  if (en) en.onclick = () => {
+    pushUndo();
+    ev.until = occ;
+    syncAllEventBlocks();
+    save(); closeModal(); renderAll(); sfx('back');
+    toast('Series ends ' + prettyD(occ) + ' — earlier days kept');
+  };
+
   const commit = () => {
+    const note = M.querySelector('#eN').value;
+    if (sealed) { pushUndo(); ev.note = note; save(); closeModal(); renderAll(); sfx('place'); return; }
     const title = M.querySelector('#eT').value.trim() || 'Event';
     const date = M.querySelector('#eD').value || ds;
     let s = +M.querySelector('#eS').value, e = +M.querySelector('#eE').value;
     if (e <= s) e = Math.min(1440, s + 15);
     const repv = M.querySelector('#eR').value;
     const until = repv === 'none' ? null : (M.querySelector('#eU').value || null);
+    /* A time or title change on a repeating event is ambiguous — every
+       occurrence, or just this one going forward? Ask, unless occ is the
+       series' own anchor date, where "and every occurrence after" already
+       means "all of them" and there's nothing to disambiguate. A note-only
+       change (nothing else different) keeps applying to the whole series
+       without asking — that's the one deliberate simplification kept from
+       before, and it's called out in the hint above the NOTE field. */
+    if (ev && isRepeating(ev) && occ !== ev.date && (title !== ev.title || s !== ev.s || e !== ev.e)) {
+      closeModal();
+      openScopeChoice(ev, occ, { title, s, e, note, repv, until });
+      return;
+    }
     pushUndo();
-    if (ev) Object.assign(ev, { title, date, s, e, note: M.querySelector('#eN').value, rep: repv, until: until });
-    else S.events.push({ id: uid(), title, date, s, e, note: M.querySelector('#eN').value, rep: repv, until: until, skip: [] });
+    if (ev) Object.assign(ev, { title, date, s, e, note: note, rep: repv, until: until });
+    else S.events.push({ id: uid(), title, date, s, e, note: note, rep: repv, until: until, skip: [] });
+    syncAllEventBlocks();
     save(); closeModal(); renderAll(); sfx('place');
   };
   M.querySelector('[data-save]').onclick = commit;
-  M.querySelector('#eT').addEventListener('keydown', e => { if (e.key === 'Enter') commit(); });
+  const tEl = M.querySelector('#eT');
+  if (tEl && !sealed) tEl.addEventListener('keydown', e => { if (e.key === 'Enter') commit(); });
   const del = M.querySelector('[data-del]');
-  if (del) del.onclick = () => { pushUndo(); S.events = S.events.filter(x => x.id !== ev.id); save(); closeModal(); renderAll(); sfx('back'); };
+  if (del) del.onclick = () => {
+    pushUndo();
+    S.events = S.events.filter(x => x.id !== ev.id);
+    syncAllEventBlocks();
+    save(); closeModal(); renderAll(); sfx('back');
+    toast('Event deleted');
+  };
   M.querySelector('[data-x]').onclick = closeModal;
+}
+
+/* Asks which occurrences a time/title change on a repeating event applies
+   to, then carries it out by splitting the series — never by touching a
+   sealed day. Both branches lean entirely on syncAllEventBlocks() to
+   reconcile blocks afterward, same as any other event edit: restructure
+   S.events correctly and the existing sync machinery (which already refuses
+   to rewrite a past day, see §6a) does the rest. */
+function openScopeChoice(ev, occ, edits) {
+  openModal(
+    '<h3>APPLY TO<button class="btn sm x" data-x>✕</button></h3>' +
+    '<div class="hint" style="margin-bottom:12px">"' + esc(ev.title) + '" repeats. Nothing before ' + prettyD(occ) + ' will change either way.</div>' +
+    '<div class="modrow" style="flex-direction:column;gap:8px;align-items:stretch">' +
+    '<button class="btn" data-scope="one">JUST ' + prettyD(occ) + '</button>' +
+    '<button class="btn gold" data-scope="following">' + prettyD(occ) + ' AND EVERY OCCURRENCE AFTER</button>' +
+    '</div>' +
+    '<div class="modrow" style="margin-top:10px"><div class="spacer"></div><button class="btn sm red" data-cancel>CANCEL</button></div>'
+  );
+  const M = $('#modal');
+  M.querySelector('[data-x]').onclick = closeModal;
+  M.querySelector('[data-cancel]').onclick = closeModal;
+  M.querySelector('[data-scope="one"]').onclick = () => {
+    pushUndo();
+    ev.skip = (ev.skip || []).concat([occ]);
+    S.events.push({ id: uid(), title: edits.title, date: occ, s: edits.s, e: edits.e, note: edits.note, rep: 'none', until: null, skip: [] });
+    syncAllEventBlocks();
+    save(); closeModal(); renderAll(); sfx('place');
+    toast('Changed just ' + prettyD(occ));
+  };
+  M.querySelector('[data-scope="following"]').onclick = () => {
+    pushUndo();
+    const cutoff = shiftD(occ, -1);
+    const carriedSkips = (ev.skip || []).filter(d => d >= occ);
+    ev.skip = (ev.skip || []).filter(d => d < occ);
+    ev.until = (ev.until && ev.until < cutoff) ? ev.until : cutoff;
+    S.events.push({ id: uid(), title: edits.title, date: occ, s: edits.s, e: edits.e, note: edits.note, rep: edits.repv, until: edits.until, skip: carriedSkips });
+    syncAllEventBlocks();
+    save(); closeModal(); renderAll(); sfx('place');
+    toast('Changed ' + prettyD(occ) + ' onward — earlier days kept');
+  };
 }
 
 function openDayPanel(ds) {
@@ -1701,9 +2315,8 @@ function openDayPanel(ds) {
     '<div class="li"><span>Score</span><span class="amt" style="color:var(--chip)">' + (gradedSlots(d) ? sc + ' / 100' : '—') + '</span></div>' +
     '<div class="li" style="margin-top:6px"><span>Rank</span><span class="amt" style="color:var(--mult)">' + dayRank(d).toFixed(1) + ' / 10</span></div>' +
     '<div class="li" style="margin-top:6px"><span class="goldtxt">Gold</span><span class="amt">' + (gradedSlots(d) ? dayGold(d).toLocaleString() : '—') + '</span></div>' +
-    '<div class="li" style="margin-top:6px"><span>Blocks</span><span class="amt">' + taskBlocks(d).filter(b => b.done).length + '/' + taskBlocks(d).length + '</span></div>' +
     '<div class="field" style="margin-top:14px"><label>EVENTS</label><div class="tlist" id="evList">' +
-    (evs.length ? evs.map(e => '<div class="trow" data-ev="' + e.id + '"><span class="dot" style="width:12px;height:12px;border-radius:4px;border:2px solid #000;background:' + C_EVENT + '"></span><span class="w">' + esc(e.title) + (isRepeating(e) ? ' ↻' : '') + '</span><small>' + minLabel(e.s) + '–' + minLabel(e.e) + '</small></div>').join('') : '<div class="hint">No events this day.</div>') +
+    (evs.length ? calOrder(evs).map(e => '<div class="trow click" data-ev="' + e.id + '"><span class="dot" style="width:12px;height:12px;border-radius:4px;border:2px solid #000;background:' + (isRepeating(e) ? C_EVENT : C_ONEOFF) + '"></span><span class="w">' + esc(e.title) + (isRepeating(e) ? ' ↻' : '') + '</span><small>' + minLabel(e.s) + '–' + minLabel(e.e) + '</small></div>').join('') : '<div class="hint">No events this day.</div>') +
     '</div></div>' +
     '<div class="modrow"><button class="btn sm gold" data-add>+ EVENT</button>' +
     '<button class="btn sm blue" data-open>OPEN IN DAY VIEW</button>' +
@@ -1721,11 +2334,16 @@ function openDayPanel(ds) {
   });
 }
 
-/* ---------------- copy / templates ---------------- */
-function copyInto(srcDs, dstDs) {
+/* ---------------- copy blocks (CALENDAR's day panel + DAILY's AUTOFILL) ----------------
+   Shared by copyInto (CALENDAR) and autofillDay (DAILY): only TASK blocks
+   ever move (events are never touched — they're always re-derived by
+   syncEventsOn, not something to copy) and only into currently-free time —
+   an existing block in `dstDs`, or an event, always wins; the incoming block
+   is carved down to whatever free slots remain around it, and any run of
+   zero free slots is simply dropped. No pushUndo/save/render here — callers
+   own the transaction. */
+function mergeBlocksFreeSpace(srcDs, dstDs) {
   const src = dayOf(srcDs);
-  if (!src.blocks.length) { toast('Nothing to copy from ' + prettyD(srcDs)); return 0; }
-  pushUndo();
   const dst = getDay(dstDs);
   const occ = occupancy(dst, true, dstDs);
   let n = 0;
@@ -1739,72 +2357,77 @@ function copyInto(srcDs, dstDs) {
     flush();
   });
   dst.blocks.sort((a, b) => a.start - b.start);
+  return n;
+}
+function copyInto(srcDs, dstDs) {
+  if (isPastDay(dstDs)) { toast('Past days are archived'); return 0; }
+  const src = dayOf(srcDs);
+  if (!src.blocks.length) { toast('Nothing to copy from ' + prettyD(srcDs)); return 0; }
+  pushUndo();
+  const n = mergeBlocksFreeSpace(srcDs, dstDs);
   save(); renderAll(); sfx('place');
   return n;
 }
-function openTemplates() {
-  openModal(
-    '<h3>♦ TEMPLATES<button class="btn sm x" data-x>✕</button></h3>' +
-    '<div class="hint" style="margin-bottom:8px">Anything you copy in fills only empty time — blocks and events already on <b>' + prettyD(cur) + '</b> win every conflict and stay put.</div>' +
-    '<div class="tlist" id="tl">' +
-    (S.templates.length ? S.templates.map(t => '<div class="trow"><span class="w">' + esc(t.name) + '</span><small>' + t.blocks.length + ' blocks</small><button class="btn sm green" data-load="' + t.id + '">LOAD</button><button class="btn sm red" data-del="' + t.id + '">✕</button></div>').join('') : '<div class="hint">No templates yet — build a good day, then save it below.</div>') +
-    '</div>' +
-    '<div class="modrow"><input class="inp" id="tName" placeholder="name this day…" value="' + esc(prettyD(cur)) + '"><button class="btn gold" data-save>SAVE CURRENT DAY</button></div>' +
-    '<div class="field" style="margin-top:14px"><label>OR COPY FROM A REAL DAY</label>' +
-    '<div class="modrow" style="margin-top:0"><button class="btn sm blue" data-yest>COPY YESTERDAY</button>' +
-    '<button class="btn sm" data-pick>COPY A DAY…</button><div class="spacer"></div></div></div>'
-  );
-  const M = $('#modal');
-  M.querySelector('[data-x]').onclick = closeModal;
-  M.querySelector('[data-yest]').onclick = () => {
-    const n = copyInto(shiftD(cur, -1), cur);
-    closeModal();
-    if (n) toast(n + ' block' + (n > 1 ? 's' : '') + ' copied from yesterday');
-  };
-  M.querySelector('[data-pick]').onclick = openCopyFrom;
-  M.querySelector('[data-save]').onclick = () => {
-    const d = dayOf(cur);
-    if (!d.blocks.length) { toast('This day is empty'); return; }
-    pushUndo();
-    S.templates.push({ id: uid(), name: M.querySelector('#tName').value.trim() || 'Template', blocks: taskBlocks(d).map(b => ({ start: b.start, len: b.len, taskId: b.taskId, note: b.note })) });
-    save(); openTemplates(); sfx('place'); toast('Template saved');
-  };
-  M.querySelector('#tl').addEventListener('click', e => {
-    const l = e.target.closest('[data-load]'), x = e.target.closest('[data-del]');
-    if (l) {
-      const t = S.templates.find(v => v.id === l.dataset.load); if (!t) return;
-      pushUndo();
-      const dst = getDay(cur), occ = occupancy(dst, true, cur);
-      let n = 0;
-      t.blocks.forEach(b => {
-        let run = null;
-        const flush = () => { if (run) { dst.blocks.push({ id: uid(), start: run.s, len: run.l, taskId: b.taskId, note: b.note, done: false, grade: null }); n++; run = null; } };
-        for (let i = b.start; i < b.start + b.len && i < SLOTS; i++) { if (!occ[i]) { if (!run) run = { s: i, l: 0 }; run.l++; occ[i] = 'n'; } else flush(); }
-        flush();
-      });
-      dst.blocks.sort((a, b) => a.start - b.start);
-      save(); closeModal(); renderAll(); sfx('place'); toast(n + ' blocks loaded');
-    }
-    if (x) { pushUndo(); S.templates = S.templates.filter(v => v.id !== x.dataset.del); save(); openTemplates(); }
-  });
-}
-function openCopyFrom() {
-  openModal(
-    '<h3>COPY A DAY IN<button class="btn sm x" data-x>✕</button></h3>' +
-    '<div class="hint" style="margin-bottom:10px">Copies every block from that day into <b>' + prettyD(cur) + '</b>. Anything already scheduled — blocks and calendar events — wins the conflict and stays put.</div>' +
-    '<div class="field"><label>SOURCE DAY</label><input class="inp" type="date" id="cD" value="' + shiftD(cur, -1) + '"></div>' +
-    '<div class="modrow"><button class="btn sm" data-quick="-1">YESTERDAY</button><button class="btn sm" data-quick="-7">LAST WEEK</button><div class="spacer"></div><button class="btn green" data-go>COPY IN</button></div>'
-  );
-  const M = $('#modal');
-  M.querySelector('[data-x]').onclick = closeModal;
-  M.querySelectorAll('[data-quick]').forEach(b => b.onclick = () => { M.querySelector('#cD').value = shiftD(cur, +b.dataset.quick); });
-  M.querySelector('[data-go]').onclick = () => {
-    const src = M.querySelector('#cD').value; if (!src) return;
-    const n = copyInto(src, cur); closeModal();
-    if (n) toast(n + ' block' + (n > 1 ? 's' : '') + ' copied in');
-  };
+
+/* ---------------- AUTOFILL (DAILY toolbar) ----------------
+   Copies just the TASK blocks (never events, never quotas) from another day
+   into `cur`, either merged around whatever is already booked (mode 'keep',
+   the default — same free-space-only carving copyInto uses) or after
+   wiping cur's existing blocks first (mode 'wipe' — events included in the
+   wipe, since syncEventsOn/renderAll rebuild them fresh regardless, same as
+   ☰ Menu's CLEAR EVERY BLOCK). */
+function autofillDay(srcDs, dstDs, wipe) {
+  if (isPastDay(dstDs)) { toast('Past days are archived'); return; }
+  if (!taskBlocks(dayOf(srcDs)).length) { toast('Nothing to copy from ' + prettyD(srcDs)); return; }
+  pushUndo();
+  if (wipe) getDay(dstDs).blocks = [];
+  const n = mergeBlocksFreeSpace(srcDs, dstDs);
+  save(); closeModal(); renderAll(); sfx('place');
+  toast(n ? n + ' block' + (n === 1 ? '' : 's') + ' autofilled from ' + prettyD(srcDs) : 'No free space to autofill into');
 }
 
+function openAutofill() {
+  if (isPastDay(cur)) { toast('Past days are archived'); return; }
+  const yestDs = shiftD(cur, -1), lastWkDs = shiftD(cur, -7);
+  const label = cur === todayStr() ? 'TODAY' : prettyD(cur);
+  let src = null, mode = 'keep';
+  openModal(
+    '<h3>AUTOFILL ' + esc(label) + '<button class="btn sm x" data-x>✕</button></h3>' +
+    '<div class="field"><label>COPY BLOCKS FROM</label>' +
+    '<div class="modrow" style="flex-wrap:wrap;gap:7px;margin-top:2px">' +
+    '<button class="btn sm" data-src="yest">YESTERDAY<br><small style="font-weight:600;opacity:.7">' + esc(prettyD(yestDs)) + '</small></button>' +
+    '<button class="btn sm" data-src="lastweek">SAME DAY LAST WEEK<br><small style="font-weight:600;opacity:.7">' + esc(prettyD(lastWkDs)) + '</small></button>' +
+    '<button class="btn sm" data-src="pick">CHOOSE A DAY</button>' +
+    '</div>' +
+    '<input class="inp" type="date" id="afDate" value="' + yestDs + '" style="margin-top:8px" hidden></div>' +
+    '<div class="field"><label>IF ' + esc(label) + ' ALREADY HAS BLOCKS</label>' +
+    '<div class="modrow" style="flex-direction:column;gap:8px;align-items:stretch;margin-top:2px">' +
+    '<button class="btn gold" data-mode="keep">KEEP MINE — autofill only fills the empty time</button>' +
+    '<button class="btn" data-mode="wipe">DELETE MINE FIRST — autofill replaces everything</button>' +
+    '</div></div>' +
+    '<div class="modrow"><div class="spacer"></div><button class="btn green" data-go>AUTOFILL</button></div>'
+  );
+  const M = $('#modal');
+  M.querySelector('[data-x]').onclick = closeModal;
+  const srcBtns = M.querySelectorAll('[data-src]'), modeBtns = M.querySelectorAll('[data-mode]');
+  const dateInp = M.querySelector('#afDate');
+  srcBtns.forEach(b => b.onclick = () => {
+    src = b.dataset.src;
+    srcBtns.forEach(x => x.classList.toggle('gold', x === b));
+    dateInp.hidden = src !== 'pick';
+    if (src === 'pick') dateInp.focus();
+  });
+  modeBtns.forEach(b => b.onclick = () => {
+    mode = b.dataset.mode;
+    modeBtns.forEach(x => x.classList.toggle('gold', x === b));
+  });
+  M.querySelector('[data-go]').onclick = () => {
+    const srcDs = src === 'yest' ? yestDs : src === 'lastweek' ? lastWkDs : src === 'pick' ? dateInp.value : null;
+    if (!srcDs) { toast('Pick a day to copy from'); return; }
+    if (srcDs === cur) { toast('Pick a different day'); return; }
+    autofillDay(srcDs, cur, mode === 'wipe');
+  };
+}
 /* ---------------- day recap ---------------- */
 const FEEDBACK = [
   [95, 'Near-perfect use of the time you booked.'],
@@ -1819,12 +2442,24 @@ function showRecap() {
   const d = dayOf(cur), sc = dayScore(d);
   const tb = taskBlocks(d);
   const doneN = tb.filter(b => b.done).length;
-  if (!d.blocks.length) { toast('Nothing planned on this day yet'); return; }
+  const seeStats = '<button class="btn" id="btnSeeStats">SEE ALL STATS</button>';
+  if (!d.blocks.length) {
+    openModal(
+      '<div class="recap"><div class="head"><div class="big outline">NOTHING PLANNED</div>' +
+      '<div class="sub">' + prettyD(cur) + '</div></div>' +
+      '<div class="hint" style="font-size:12.5px;margin-top:10px;opacity:.85">Nothing planned on this day yet — book a block to start racking up score.</div>' +
+      '<div class="modrow">' + seeStats + '<div class="spacer"></div><button class="btn gold" data-x>DONE</button></div></div>',
+      'wide'
+    );
+    $('#modal').querySelectorAll('[data-x]').forEach(b => b.onclick = closeModal);
+    $('#btnSeeStats').onclick = () => { closeModal(); switchView('stats'); };
+    return;
+  }
   const fb = (FEEDBACK.find(f => sc >= f[0]) || FEEDBACK[FEEDBACK.length - 1])[1];
   const per = {};
   tb.forEach(b => { if (!b.done) return; per[b.grade] = (per[b.grade] || 0) + b.len; });
   const maxV = Math.max(1, ...Object.values(per));
-  const gradeCount = GRADES.map(g => [g, d.blocks.filter(b => b.grade === g.g).length]).filter(x => x[1]);
+  const gradeCount = ALL_GRADES.map(g => [g, tb.filter(b => b.grade === g.g).length]).filter(x => x[1]);
   const bd = bestDay();
   const rk = dayRank(d), gold = dayGold(d);
   openModal(
@@ -1835,7 +2470,8 @@ function showRecap() {
     '<div class="li"><span>Rank — how full the day was</span><span class="amt" style="color:var(--mult)">' + rk.toFixed(1) + ' / 10</span></div>' +
     '<div class="li"><span class="goldtxt">Gold — score × rank</span><span class="amt">' + gold.toLocaleString() + '</span></div>' +
     '<div class="li"><span>Blocks graded</span><span class="amt">' + doneN + '/' + tb.length + '</span></div>' +
-    '<div class="li"><span>Time booked</span><span class="amt">' + durLabel(bookedSlots(d)) + ' of ' + DAY_HOURS + 'h</span></div>' +
+    '<div class="li"><span>Time that counted</span><span class="amt">' + durLabel(bookedSlots(d)) + ' of ' + durLabel(windowSlots(d)) + '</span></div>' +
+    (rawBooked(d) !== bookedSlots(d) ? '<div class="li"><span>Handed back by F / U / D</span><span class="amt" style="color:var(--mult)">' + durLabel(rawBooked(d) - bookedSlots(d)) + '</span></div>' : '') +
     (bookedSlots(d) !== scoreWeight(d) ? '<div class="li"><span>Of that, events (not scored)</span><span class="amt" style="color:var(--event)">' + durLabel(bookedSlots(d) - scoreWeight(d)) + '</span></div>' : '') +
     (doneN ? '<div class="li"><span>Score on graded time only</span><span class="amt">' + gradedScore(d) + '</span></div>' : '') +
     (gradeCount.length ? '<div class="li"><span>Report card</span><span class="amt">' + gradeCount.map(x => x[1] + '×' + x[0].g).join('  ') + '</span></div>' : '') +
@@ -1843,72 +2479,146 @@ function showRecap() {
     '<div class="li"><span class="goldtxt">Best gold so far</span><span class="amt">' + (bd.gold ? bd.gold.toLocaleString() + (bd.date === cur ? ' ← today' : '') : '—') + '</span></div>' +
     '</div>' +
     (Object.keys(per).length ? '<div class="field"><label>HOURS BY GRADE</label><div class="bars">' +
-      GRADES.filter(g => per[g.g]).map(g =>
+      ALL_GRADES.filter(g => per[g.g]).map(g =>
         '<div class="bar" style="--c:' + g.color + '"><span class="nm">' + g.g + ' — ' + g.label + '</span><span class="tr"><i style="width:' + (per[g.g] / maxV * 100) + '%"></i></span><span class="vv">' + durLabel(per[g.g]) + '</span></div>'
       ).join('') + '</div></div>' : '') +
     '<div class="hint" style="font-size:12.5px;margin-top:10px;opacity:.85">' + fb + '</div>' +
-    '<div class="modrow"><div class="spacer"></div><button class="btn gold" data-x>DONE</button></div></div>',
+    '<div class="modrow">' + seeStats + '<div class="spacer"></div><button class="btn gold" data-x>DONE</button></div></div>',
     'wide'
   );
   requestAnimationFrame(() => $$('#modal .bar .tr i').forEach(i => { const w = i.style.width; i.style.width = '0'; requestAnimationFrame(() => i.style.width = w); }));
   $('#modal').querySelectorAll('[data-x]').forEach(b => b.onclick = closeModal);
+  $('#btnSeeStats').onclick = () => { closeModal(); switchView('stats'); };
 }
 
 /* ---------------- TASKS ---------------- */
-let tkVis = 'visible', tkSort = 'new';
+let tkVis = 'visible', tkSort = 'az';
 
+/* Deleting and hiding are one button now, and which one you get is decided by
+   the task's history: a task that has already been done is a record, so it can
+   only be hidden. Anything that never happened can be erased outright. */
 function renderTasks() {
   const L = $('#tklist'); L.innerHTML = '';
   const stats = {};
   S.tasks.forEach(t => stats[t.id] = taskStats(t.id));
-  let list = S.tasks.filter(t => tkVis === 'all' ? true : tkVis === 'hidden' ? t.hidden : !t.hidden);
-  if (tkSort === 'az') list.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
-  else if (tkSort === 'freq') list.sort((a, b) => stats[b.id].slots - stats[a.id].slots || a.name.localeCompare(b.name));
-  else list.sort((a, b) => (b.created || 0) - (a.created || 0));
+  const list = S.tasks.filter(t => tkVis === 'all' ? true : !t.hidden);
+  if (tkSort === 'freq') list.sort((a, b) => stats[b.id].slots - stats[a.id].slots || a.name.localeCompare(b.name));
+  else list.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
 
+  const hid = S.tasks.filter(t => t.hidden).length;
   $('#tkHdr').innerHTML = '<span>' + list.length + ' TASK' + (list.length === 1 ? '' : 'S') + '  ·  ' +
-    tkVis.toUpperCase() + '  ·  ' + (tkSort === 'az' ? 'A–Z' : tkSort === 'freq' ? 'BY FREQUENCY' : 'NEWEST FIRST') +
+    (tkVis === 'all' ? 'ALL' : 'VISIBLE') + '  ·  ' + (tkSort === 'freq' ? 'BY FREQUENCY' : 'A–Z') +
+    (tkVis === 'visible' && hid ? '  ·  ' + hid + ' HIDDEN' : '') +
     '</span><span>HOURS  ·  BLOCKS</span>';
 
   if (!list.length) {
-    L.appendChild(div('tkempty', S.tasks.length ? 'nothing here — try another filter' : 'no tasks yet — add one above'));
+    L.appendChild(div('tkempty', S.tasks.length ? 'nothing here — try ALL' : 'no tasks yet — add one above'));
     return;
   }
 
   list.forEach(t => {
     const st = stats[t.id];
     const r = div('tkrow' + (t.hidden ? ' hid' : ''));
-    const inp = document.createElement('input');
-    inp.className = 'nm'; inp.value = t.name; inp.spellcheck = false;
-    inp.onchange = () => {
-      const v = inp.value.trim();
-      if (!v) { inp.value = t.name; return; }
-      pushUndo(); t.name = v; save(); renderTasks(); renderRail();
-    };
-    inp.onkeydown = e => { if (e.key === 'Enter') inp.blur(); };
-    r.appendChild(inp);
+    const nm = div('nmtxt', t.name);
+    nm.title = t.name;
+    r.appendChild(nm);
+    if (t.hidden) r.appendChild(div('hidtag', 'HIDDEN'));
 
-    const hrs = div('hrs', st.slots ? durLabel(st.slots) : '—');
-    const cnt = div('cnt', st.count + ' blk');
-    const eye = document.createElement('button');
-    eye.className = 'btn sm' + (t.hidden ? '' : ' green');
-    eye.textContent = t.hidden ? 'SHOW' : 'HIDE';
-    eye.title = t.hidden ? 'show this task in the block picker and stats' : 'hide it — old blocks are kept';
-    eye.onclick = () => { pushUndo(); t.hidden = !t.hidden; save(); renderTasks(); sfx('click'); };
+    r.appendChild(div('hrs', st.slots ? durLabel(st.slots) : '—'));
+    r.appendChild(div('cnt', st.count + ' blk'));
 
-    const del = document.createElement('button');
-    del.className = 'btn sm red';
-    del.textContent = '✕';
-    if (st.count) {
-      del.disabled = true;
-      del.title = 'used by ' + st.count + ' block' + (st.count === 1 ? '' : 's') + ' — hide it instead';
+    const ren = document.createElement('button');
+    ren.className = 'btn sm';
+    ren.textContent = 'RENAME';
+    ren.title = 'rename this task';
+    ren.onclick = () => openRenameTask(t);
+    r.appendChild(ren);
+
+    const act = document.createElement('button');
+    if (t.hidden) {
+      act.className = 'btn sm green';
+      act.textContent = 'RESTORE';
+      act.title = 'put this task back in the pickers';
+      act.onclick = () => {
+        pushUndo(); t.hidden = false;
+        save(); renderTasks(); renderAll(); sfx('place'); toast('“' + t.name + '” is back');
+      };
     } else {
-      del.title = 'delete this task';
-      del.onclick = () => { pushUndo(); S.tasks = S.tasks.filter(x => x.id !== t.id); save(); renderTasks(); sfx('back'); };
+      act.className = 'btn sm red';
+      act.textContent = '✕';
+      act.title = st.done ? 'this task has graded blocks — it can only be hidden'
+        : st.ahead ? 'delete — its ' + st.ahead + ' upcoming block' + (st.ahead === 1 ? '' : 's') + ' go too'
+        : 'delete this task';
+      act.onclick = () => {
+        if (st.done) {           /* history exists: hide, never erase */
+          pushUndo(); t.hidden = true;
+          save(); renderTasks(); renderAll(); sfx('back');
+          toast('“' + t.name + '” has graded blocks — hidden instead');
+          return;
+        }
+        if (st.ahead) { openDeleteTask(t, st); return; }
+        eraseTask(t);
+      };
     }
-    r.appendChild(hrs); r.appendChild(cnt); r.appendChild(eye); r.appendChild(del);
+    r.appendChild(act);
     L.appendChild(r);
   });
+}
+
+/* only ever reached for tasks with no finished blocks */
+function eraseTask(t) {
+  pushUndo();
+  stampTaskName(t.id, t.name);
+  const n = dropTaskBlocks(t.id);
+  S.tasks = S.tasks.filter(x => x.id !== t.id);
+  save(); closeModal(); renderTasks(); renderAll(); sfx('back');
+  toast(n ? '“' + t.name + '” and ' + n + ' block' + (n === 1 ? '' : 's') + ' erased' : '“' + t.name + '” erased');
+}
+
+function openDeleteTask(t, st) {
+  openModal(
+    '<h3>DELETE THIS TASK?<button class="btn sm x" data-x>✕</button></h3>' +
+    '<div class="li" style="margin-bottom:10px"><span>' + esc(t.name) + '</span>' +
+    '<span class="amt" style="font-size:14px;color:#9fb0ad">' + st.ahead + ' upcoming block' + (st.ahead === 1 ? '' : 's') + '</span></div>' +
+    '<div class="hint">Nothing of this task has been finished yet, so it can go for good. ' +
+    'Hitting DELETE erases the task <b>and</b> its ' + st.ahead + ' upcoming block' + (st.ahead === 1 ? '' : 's') + '. ' +
+    'This cannot be undone from the archive — only with <b>Ctrl+Z</b>.</div>' +
+    '<div class="modrow"><button class="btn" data-x2>CANCEL</button><div class="spacer"></div>' +
+    '<button class="btn red" data-del>DELETE</button></div>'
+  );
+  const M = $('#modal');
+  M.querySelector('[data-x]').onclick = closeModal;
+  M.querySelector('[data-x2]').onclick = closeModal;
+  M.querySelector('[data-del]').onclick = () => eraseTask(t);
+}
+
+function openRenameTask(t) {
+  const st = taskStats(t.id);
+  openModal(
+    '<h3>RENAME TASK<button class="btn sm x" data-x>✕</button></h3>' +
+    '<div class="field"><label>NAME</label><input class="inp" id="rnName" data-autofocus value="' + esc(t.name) + '"></div>' +
+    (st.count
+      ? '<div class="hint">This task already has <b>' + st.count + ' block' + (st.count === 1 ? '' : 's') + '</b> — every one of them, past days included, will show the new name.</div>'
+      : '<div class="hint">No blocks use this task yet.</div>') +
+    '<div class="modrow"><button class="btn" data-x2>CANCEL</button><div class="spacer"></div>' +
+    '<button class="btn gold" data-ok>RENAME</button></div>'
+  );
+  const M = $('#modal');
+  const inp = M.querySelector('#rnName');
+  const go = () => {
+    const v = inp.value.trim();
+    if (!v) { inp.focus(); return; }
+    if (v === t.name) { closeModal(); return; }
+    if (S.tasks.some(x => x.id !== t.id && x.name.toLowerCase() === v.toLowerCase())) { toast('You already have a task called that'); inp.select(); return; }
+    pushUndo();
+    t.name = v;
+    stampTaskName(t.id, v);
+    save(); closeModal(); renderTasks(); renderAll(); sfx('place'); toast('Renamed to “' + v + '”');
+  };
+  inp.onkeydown = e => { if (e.key === 'Enter') go(); };
+  M.querySelector('[data-ok]').onclick = go;
+  M.querySelector('[data-x]').onclick = closeModal;
+  M.querySelector('[data-x2]').onclick = closeModal;
 }
 
 function newTaskFromInput() {
@@ -1946,7 +2656,7 @@ function statDays() {
     return {
       ds: k, score: dayScore(d), rank: dayRank(d), gold: dayGold(d),
       graded: d.blocks.filter(b => b.done).length, total: d.blocks.length,
-      slots: bookedSlots(d), gslots: gradedSlots(d)
+      slots: bookedSlots(d), rslots: rawBooked(d), gslots: gradedSlots(d)
     };
   });
 }
@@ -2067,7 +2777,10 @@ function renderStatCards(pts) {
   const mean = arr => arr.length ? arr.reduce((t, p) => t + val(p), 0) / arr.length : 0;
   const avg = mean(graded);
   const bd = bestDay();
-  const hrs = pts.reduce((t, p) => t + p.slots, 0);
+  /* booked is raw here — it is the time you put on the calendar. The time that
+     survived its grades is the sub-line, and rank is what really uses it. */
+  const hrs = pts.reduce((t, p) => t + p.rslots, 0);
+  const eff = pts.reduce((t, p) => t + p.slots, 0);
   const gh = pts.reduce((t, p) => t + p.gslots, 0);
   const last7 = pts.slice(-7).filter(p => p.gslots);
   const avg7 = mean(last7);
@@ -2079,7 +2792,7 @@ function renderStatCards(pts) {
     { k: 'LAST 7 DAYS', v: last7.length ? M.fmt(avg7) : '—', s: tsign + M.fmt(Math.abs(trend)) + ' vs average', c: trend >= 0 ? 'good' : '' },
     { k: 'BEST GOLD', v: bd.gold ? bd.gold.toLocaleString() : '—', s: bd.date ? prettyD(bd.date) + '  ·  ' + bd.score + ' × ' + bd.rank.toFixed(1) : 'nothing graded yet', c: 'cashv' },
     { k: 'STREAK', v: computeStreak(), s: 'days in a row graded', c: 'hot' },
-    { k: 'TIME BOOKED', v: Math.round(hrs / 4) + 'h', s: 'in this range', c: '' },
+    { k: 'TIME BOOKED', v: Math.round(hrs / 4) + 'h', s: Math.round(eff / 4) + 'h counted after grades', c: '' },
     { k: 'TIME GRADED', v: Math.round(gh / 4) + 'h', s: hrs ? Math.round(gh / hrs * 100) + '% of booked' : '—', c: '' }
   ];
   $('#scards').innerHTML = cards.map(c =>
@@ -2096,9 +2809,9 @@ function renderTaskBars() {
     if (isEvent(b) || !b.taskId) return;
     const t = taskOf(b.taskId);
     if (!t || t.hidden) return;
-    per[b.taskId] = (per[b.taskId] || 0) + b.len;
+    per[b.taskId] = (per[b.taskId] || 0) + effLen(b);   /* F and U hand their time back */
   }));
-  const keys = Object.keys(per).sort((a, b) => per[b] - per[a]).slice(0, 10);
+  const keys = Object.keys(per).filter(k => per[k] > 0).sort((a, b) => per[b] - per[a]).slice(0, 10);
   const max = Math.max(1, ...keys.map(k => per[k]));
   $('#taskPanel').hidden = !keys.length;
   $('#taskBars').innerHTML = keys.map(k =>
@@ -2110,8 +2823,9 @@ function renderTaskBars() {
 
 function renderCatBars() {
   const pts = statSeries, per = {};
+  /* raw hours here on purpose: this is the shape of the time you spent, not the time that counted */
   pts.forEach(p => (S.days[p.ds].blocks || []).forEach(b => { if (b.done && !isEvent(b)) per[b.grade] = (per[b.grade] || 0) + b.len; }));
-  const used = GRADES.filter(g => per[g.g]);
+  const used = ALL_GRADES.filter(g => per[g.g]);
   const max = Math.max(1, ...used.map(g => per[g.g]));
   $('#catPanel').hidden = !used.length;
   $('#catBars').innerHTML = used.map(g =>
@@ -2150,6 +2864,15 @@ function openMenu() {
     '<button class="btn ' + (fsStatus === 'on' ? '' : 'green') + '" data-link>' + (fsStatus === 'on' ? 'CHANGE FILE' : 'SAVE TO A FILE…') + '</button>' +
     '<button class="btn blue" data-open>OPEN A SAVE FILE…</button>' +
     '</div></div>' +
+    '<div class="field"><label>ALERTS</label>' +
+    '<div class="li"><span>' + (typeof Notification === 'undefined' ? 'This browser has no desktop notifications'
+      : Notification.permission === 'granted' ? '● desktop alerts on'
+      : Notification.permission === 'denied' ? 'Desktop alerts blocked — Baron pops its own card instead'
+      : 'Desktop alerts not enabled yet — Baron pops its own card instead') + '</span></div>' +
+    '<div class="hint" style="margin-top:8px">Every block and event gets a chime ' + ALERT_LEAD + ' minutes before it starts. This ignores the ♪ mute, and only works while Baron is open in a tab.</div>' +
+    (typeof Notification !== 'undefined' && Notification.permission === 'default'
+      ? '<div class="modrow" style="margin-top:9px"><button class="btn sm green" data-notify>ENABLE DESKTOP ALERTS</button></div>' : '') +
+    '</div>' +
     '<div class="field"><label>BACKUPS</label><div class="modrow" style="margin-top:0"><button class="btn sm" data-exp>EXPORT .JSON</button><button class="btn sm" data-imp>IMPORT .JSON</button></div></div>' +
     '<div class="field"><label>THIS DAY  ·  ' + prettyD(cur) + '</label><div class="modrow" style="margin-top:0">' +
     '<button class="btn sm red" data-clear>CLEAR EVERY BLOCK</button></div></div>' +
@@ -2162,9 +2885,12 @@ function openMenu() {
   M.querySelector('[data-link]').onclick = () => linkFile(false);
   M.querySelector('[data-open]').onclick = () => linkFile(true);
   const gr = M.querySelector('[data-grant]'); if (gr) gr.onclick = () => { grantHandle(); closeModal(); };
+  const nb = M.querySelector('[data-notify]');
+  if (nb) nb.onclick = () => { askNotify(); closeModal(); };
   M.querySelector('[data-exp]').onclick = exportJSON;
   M.querySelector('[data-imp]').onclick = importJSON;
   M.querySelector('[data-clear]').onclick = () => {
+    if (isPastDay(cur)) { toast('Past days are archived'); return; }
     const d = getDay(cur);
     if (!d.blocks.length) { toast('That day is already empty'); return; }
     pushUndo(); d.blocks = [];
@@ -2183,21 +2909,24 @@ function openHelp() {
     ['Click a block', 'edit it'],
     ['Click the ✓', 'grade it F → A'],
     ['Drag a block’s bottom edge', 'resize'],
+    ['Click SOD / EOD', 'reveal the hours beyond it'],
     ['1 – 5 in the grade card', 'pick a grade'],
-    ['V', 'switch timeline / list'],
-    ['click the date', 'jump back to today'],
-    ['B', 'new block'], ['N', 'jump to now'], ['T / C / K / S', 'today / calendar / tasks / stats'],
+    ['TODAY button', 'jump back to today'],
+    ['past days', 'read-only archive'],
+    ['B', 'new block'], ['N', 'jump to now'], ['T / Q / K / C', 'daily / quotas / tasks / calendar'], ['S', 'recap today (→ SEE ALL STATS)'],
     ['← →', 'previous / next day'], ['Ctrl+Z', 'undo'], ['Esc', 'close']
   ];
   openModal(
     '<h3>HOW IT WORKS<button class="btn sm x" data-x>✕</button></h3>' +
     '<div class="hint" style="font-size:13px;line-height:1.6;margin-bottom:12px">' +
-    'Every block is an instance of a <b>task</b> you keep in the TASKS tab. Red blocks are <b>events</b> pulled in from the calendar — they fill your day but are never graded and never count toward the score.<br>' +
+    'Every block is an instance of a <b>task</b> you keep in the TASKS tab. Red blocks are <b>events</b> — created in CALENDAR, they always sit on the day they occur, and they fill your day but are never graded and never count toward the score.<br>' +
     'When a block’s time has passed it starts glowing — grade it ' +
-    GRADES.map(g => '<b style="color:' + g.color + '">' + g.g + '</b>').join(' · ') + '. ' +
+    GRADES.map(g => '<b style="color:' + g.color + '">' + g.g + '</b> ' + g.pts + '%').join(' · ') +
+    '. Anything still ungraded when the day ends is stamped <b style="color:' + AUTO.color + '">U</b> ' + AUTO.pts +
+    '% and the day is sealed — past blocks and events can no longer be added, changed or deleted. ' +
     'Three numbers come out of that:<br>' +
     '<b style="color:#0093ff">SCORE / 100</b> — how well you did what you booked, weighted by block length. Ungraded time counts as zero, so it stays honest.<br>' +
-    '<b style="color:#e2564c">RANK / 10</b> — how full the day was. Booked hours ÷ ' + DAY_HOURS + 'h × 10, capped at 10.<br>' +
+    '<b style="color:#e2564c">RANK / 10</b> — how full your working day was. Time that counted ÷ the window between <b style="color:#9a5bd6">SOD</b> and <b style="color:#9a5bd6">EOD</b>, × 10. That window is 9:00a–10:00p unless blocks reach past either edge. <b>F</b> and <b>U</b> hand all their time back, <b>D</b> hands back half — so a day you slept through ranks near zero however much you booked.<br>' +
     '<b class="goldtxt">GOLD / 1000</b> — score × rank. It only goes up if you both booked a real day <i>and</i> did it well.' +
     '</div>' +
     rows.map(r => '<div class="helprow"><span class="kbd">' + r[0] + '</span><b>' + r[1] + '</b></div>').join('') +
@@ -2207,23 +2936,91 @@ function openHelp() {
   $('#modal').querySelectorAll('[data-x]').forEach(b => b.onclick = closeModal);
 }
 
+/* ---------------- the 10-minute heads-up ----------------
+   Fires for the next block or event of the day, 10 minutes before it starts.
+   Deliberately independent of the ♪ mute: that button is for the little
+   interface clicks, this is the one thing that should always get through. */
+const ALERT_LEAD = 10;              // minutes
+let alerted = {};                   // key -> true, cleared each day
+let alertDay = '';
+
+function notifyReady() {
+  return typeof Notification !== 'undefined' && Notification.permission === 'granted';
+}
+function askNotify() {
+  if (typeof Notification === 'undefined') { toast('This browser has no notifications — Baron will pop its own'); return; }
+  if (Notification.permission === 'granted') { toast('Alerts are already on'); return; }
+  Notification.requestPermission().then(p => {
+    toast(p === 'granted' ? 'Desktop alerts on' : 'Desktop alerts blocked — Baron will pop its own instead');
+    renderAll();
+  }).catch(() => toast('Desktop alerts unavailable here'));
+}
+
+/* a chime that ignores the mute toggle */
+function chime() {
+  const c = ac(); if (!c) return;
+  if (c.state === 'suspended') c.resume();
+  [880, 1174, 1568].forEach((f, i) => setTimeout(() => {
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = 'triangle'; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, c.currentTime);
+    g.gain.exponentialRampToValueAtTime(.16, c.currentTime + .01);
+    g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + .5);
+    o.connect(g); g.connect(c.destination); o.start(); o.stop(c.currentTime + .55);
+  }, i * 150));
+}
+
+function popAlert(title, whenTxt) {
+  chime();
+  if (notifyReady()) {
+    try {
+      const n = new Notification('Baron — starting in ' + ALERT_LEAD + ' min', { body: title + '\n' + whenTxt, tag: 'baron-' + title + whenTxt, requireInteraction: false });
+      n.onclick = () => { window.focus(); n.close(); };
+    } catch (e) { /* fall through to the in-page card */ }
+  }
+  const old = $('.alert'); if (old) old.remove();
+  const el = div('alert');
+  el.innerHTML = '<div class="x">✕</div><div class="k">STARTING IN ' + ALERT_LEAD + ' MIN</div>' +
+    '<div class="t">' + esc(title) + '</div><div class="w">' + esc(whenTxt) + '</div>';
+  el.onclick = () => el.remove();
+  document.body.appendChild(el);
+  setTimeout(() => { if (el.isConnected) el.remove(); }, 60000);
+}
+
+function checkAlerts() {
+  const t = todayStr();
+  if (alertDay !== t) { alertDay = t; alerted = {}; }
+  syncEventsOn(t);   // every event is a block now — make sure today's are current before scanning
+  const now = new Date().getHours() * 60 + new Date().getMinutes();
+  const d = dayOf(t);
+  const items = d.blocks.map(b => ({ key: 'b' + b.id, s: b.start * 15, e: (b.start + b.len) * 15, title: taskLabel(b) }));
+  items.forEach(it => {
+    const lead = it.s - now;
+    if (lead <= ALERT_LEAD && lead > 0 && !alerted[it.key]) {
+      alerted[it.key] = true;
+      popAlert(it.title, minLabel(it.s) + ' – ' + minLabel(it.e));
+    }
+  });
+}
+
 /* ---------------- view switching ---------------- */
 function switchView(v) {
   $('#viewDay').hidden = v !== 'day';
+  $('#viewWeek').hidden = v !== 'week';
   $('#viewCal').hidden = v !== 'cal';
   $('#viewTasks').hidden = v !== 'tasks';
   $('#viewStats').hidden = v !== 'stats';
   $$('.tab').forEach(t => t.classList.toggle('on', t.dataset.view === v));
   renderAll();
+  fitAllNavBars();
   if (v === 'day') scrollToNow(false);
   sfx('click');
 }
 function scrollToNow(smooth) {
-  if (S.settings.dayView === 'list') return;
   const w = $('#gridwrap');
   if (w.hidden) return;
-  const target = cur === todayStr() ? nowSlotFloat() : 32;
-  w.scrollTo({ top: Math.max(0, target * ROWH - w.clientHeight * 0.38), behavior: smooth ? 'smooth' : 'auto' });
+  const target = cur === todayStr() ? nowSlotFloat() : GEO.sod;
+  w.scrollTo({ top: Math.max(0, slotY(target) - w.clientHeight * 0.38), behavior: smooth ? 'smooth' : 'auto' });
 }
 function goDay(ds) { cur = ds; renderAll(); }
 
@@ -2232,20 +3029,19 @@ function bind() {
   $$('.tab').forEach(t => t.onclick = () => switchView(t.dataset.view));
   $('#dPrev').onclick = () => { goDay(shiftD(cur, -1)); sfx('click'); };
   $('#dNext').onclick = () => { goDay(shiftD(cur, 1)); sfx('click'); };
-  $('#dLabel').onclick = () => { goDay(todayStr()); scrollToNow(true); };
+  $('#btnToday').onclick = () => { goDay(todayStr()); scrollToNow(true); sfx('click'); };
   $('#btnQuick').onclick = () => { const s = cur === todayStr() ? Math.floor(nowSlotFloat()) : 36; openBlockEditor(null, clamp(s, 0, 92), 4); };
-  $('#btnTemplates').onclick = openTemplates;
+  $('#btnAutofill').onclick = openAutofill;
   $('#btnRecap').onclick = showRecap;
   $('#tkAdd').onclick = newTaskFromInput;
   $('#tkNew').addEventListener('keydown', e => { if (e.key === 'Enter') newTaskFromInput(); });
   $$('#tkVisSeg .seg').forEach(x => x.onclick = () => { tkVis = x.dataset.tv; $$('#tkVisSeg .seg').forEach(y => y.classList.toggle('on', y === x)); renderTasks(); sfx('click'); });
   $$('#tkSortSeg .seg').forEach(x => x.onclick = () => { tkSort = x.dataset.ts; $$('#tkSortSeg .seg').forEach(y => y.classList.toggle('on', y === x)); renderTasks(); sfx('click'); });
-  $$('#viewDay .seg').forEach(s => s.onclick = () => { S.settings.dayView = s.dataset.dv; save(); renderDay(); sfx('click'); if (s.dataset.dv === 'timeline') scrollToNow(false); });
   $$('#rangeSeg .seg').forEach(s => s.onclick = () => { statRange = +s.dataset.r; $$('#rangeSeg .seg').forEach(x => x.classList.toggle('on', x === s)); renderStats(); sfx('click'); });
   $$('#metricSeg .seg').forEach(s => s.onclick = () => { statMetric = s.dataset.m; $$('#metricSeg .seg').forEach(x => x.classList.toggle('on', x === s)); renderStats(); sfx('click'); });
   $('#btnTable').onclick = () => { const t = $('#tablePanel'); t.hidden = !t.hidden; $('#btnTable').textContent = t.hidden ? 'TABLE VIEW' : 'HIDE TABLE'; sfx('click'); };
-  window.addEventListener('resize', () => { fitDateNav(); if (!$('#viewStats').hidden) renderStats(); });
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitDateNav);
+  window.addEventListener('resize', () => { fitAllNavBars(); renderAgenda(); if (!$('#viewStats').hidden) renderStats(); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitAllNavBars);
   $('#btnGrade').onclick = () => { const p = pendingBlocks(); if (p.length) openGrade(p[0].id); else toast('Nothing waiting on a grade'); };
   $('#btnHelp').onclick = openHelp;
   $('#btnMenu').onclick = openMenu;
@@ -2255,6 +3051,21 @@ function bind() {
   $('#btnMToday').onclick = () => { calM = new Date(); renderCal(); };
   $('#btnNewEvt').onclick = () => openEventEditor(null, cur);
   $('#calgrid').addEventListener('click', e => { const c = e.target.closest('[data-d]'); if (c) openDayPanel(c.dataset.d); });
+
+  $('#qPrev').onclick = () => { quotaAnchor = shiftD(quotaAnchor, -7); renderQuotasList(); fitQuotaNav(); sfx('click'); };
+  $('#qNext').onclick = () => { quotaAnchor = shiftD(quotaAnchor, 7); renderQuotasList(); fitQuotaNav(); sfx('click'); };
+  $('#btnQThis').onclick = () => { quotaAnchor = todayStr(); renderQuotasList(); fitQuotaNav(); sfx('click'); };
+  $('#btnNewQuota').onclick = () => openNewQuota();
+  $('#quotaList').addEventListener('click', e => {
+    const sep = e.target.closest('.qsep'); if (sep) { openNewQuota(sep.dataset.d); return; }
+    const row = e.target.closest('.qrow'); if (row) { openQuotaEditor(row.dataset.id); return; }
+  });
+  $('#railQuotas').addEventListener('click', e => {
+    const row = e.target.closest('.qrow'); if (!row) return;
+    pushUndo(); toggleQuota(row.dataset.id); save();
+    renderRailQuotas(); if (!$('#viewWeek').hidden) renderQuotasList();
+    sfx('tick');
+  });
   $('#agenda').addEventListener('click', e => { const r = e.target.closest('[data-ev]'); if (r) openEventEditor(r.dataset.ev, null, r.dataset.on); });
   $('#scrim').addEventListener('pointerdown', e => { if (e.target.id === 'scrim') closeModal(); });
   bindGrid();
@@ -2271,12 +3082,12 @@ function bind() {
     if (!$('#scrim').hidden) return;
     const k = e.key.toLowerCase();
     if (k === 't') switchView('day');
+    else if (k === 'q') switchView('week');
     else if (k === 'c') switchView('cal');
-    else if (k === 's') switchView('stats');
+    else if (k === 's') showRecap();
     else if (k === 'k') switchView('tasks');
     else if (k === 'n') { goDay(todayStr()); scrollToNow(true); }
     else if (k === 'b') { const s = cur === todayStr() ? Math.floor(nowSlotFloat()) : 36; openBlockEditor(null, clamp(s, 0, 92), 4); }
-    else if (k === 'v') { S.settings.dayView = S.settings.dayView === 'list' ? 'timeline' : 'list'; save(); if ($('#viewDay').hidden) switchView('day'); else renderDay(); sfx('click'); }
     else if (k === '?') openHelp();
     else if (e.key === 'ArrowLeft' && !$('#viewDay').hidden) goDay(shiftD(cur, -1));
     else if (e.key === 'ArrowRight' && !$('#viewDay').hidden) goDay(shiftD(cur, 1));
@@ -2289,14 +3100,24 @@ function bind() {
 (async function init() {
   loadLocal();
   await restoreHandle();
+  sealPastDays(true);
+  /* one-time (per save) migration: materialize every event that was sitting
+     "unpulled" under the old manual-pull system into a real event-block, and
+     persist it immediately so this isn't just an in-memory patch that has to
+     be recomputed every boot. */
+  if (syncAllEventBlocks()) save();
   refreshStreak();
   cur = todayStr();
   calM = new Date();
+  quotaAnchor = todayStr();
   bind();
   renderAll();
   scrollToNow(false);
+  checkAlerts();
+  setInterval(checkAlerts, 30000);
   setInterval(() => { if (!$('#viewDay').hidden && cur === todayStr()) renderDay(); }, 30000);
-  setInterval(() => { if (cur !== todayStr() && todayStr() !== cur) { /* keep date fresh at midnight */ } refreshStreak(); renderRail(); }, 60000);
+  /* midnight rollover: seal yesterday, then refresh everything */
+  setInterval(() => { if (sealPastDays()) renderAll(); refreshStreak(); renderRail(); renderAgenda(); }, 60000);
   if (!localStorage.getItem('baron.seen')) {
     try { localStorage.setItem('baron.seen', '1'); } catch (e) {}
     setTimeout(openHelp, 500);

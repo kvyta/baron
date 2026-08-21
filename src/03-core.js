@@ -10,23 +10,38 @@ const pad = n => (n < 10 ? '0' : '') + n;
 const uid = () => Math.random().toString(36).slice(2, 10);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
+/* Grades you choose. The percentages are the share of a block's time that
+   counts toward the day's score. */
 const GRADES = [
   { g: 'A', pts: 100, color: '#35bd86', label: 'superbly done' },
-  { g: 'B', pts: 80,  color: '#0093ff', label: 'solid' },
-  { g: 'C', pts: 60,  color: '#ffc93d', label: 'partial' },
-  { g: 'D', pts: 35,  color: '#ff8c33', label: 'barely' },
-  { g: 'F', pts: 0,   color: '#fe5f55', label: "didn't do it" }
+  { g: 'B', pts: 90,  color: '#0093ff', label: 'solid' },
+  { g: 'C', pts: 50,  color: '#ffc93d', label: 'half of it' },
+  { g: 'D', pts: 30,  color: '#ff8c33', label: 'barely' },
+  { g: 'F', pts: 20,  color: '#fe5f55', label: "didn't do it" }
 ];
-const ptsOf = g => { const x = GRADES.find(v => v.g === g); return x ? x.pts : 0; };
-const colOf = g => { const x = GRADES.find(v => v.g === g); return x ? x.color : '#888'; };
-const gradeOf = g => GRADES.find(v => v.g === g) || GRADES[GRADES.length - 1];
+/* U is never chosen — it is stamped on anything still ungraded once the day
+   is over. It scores below F on purpose: an honest F beats walking away. */
+const AUTO = { g: 'U', pts: 10, color: '#8fa0a8', label: 'never graded' };
+const ALL_GRADES = GRADES.concat([AUTO]);
+const ptsOf = g => { const x = ALL_GRADES.find(v => v.g === g); return x ? x.pts : 0; };
+const colOf = g => { const x = ALL_GRADES.find(v => v.g === g); return x ? x.color : '#888'; };
+const gradeOf = g => ALL_GRADES.find(v => v.g === g) || AUTO;
 
 /* Two kinds of block. A TASK block is an instance of one of your tasks — blue,
-   graded, and it drives the score. An EVENT block is a calendar event pulled
-   into the day — red, never graded, counts toward booked time and rank only. */
+   graded, and it drives the score. An EVENT block is a calendar event — red,
+   never graded, counts toward booked time and rank only. Every event
+   occurrence is always an event block on its date, kept in sync by
+   syncEventsOn(); there is no manual "pull" step. */
 const C_BLOCK = '#0093ff';
 const C_EVENT = '#e2564c';
+/* one-off events go green in the CALENDAR month grid only, so a genuine
+   appointment stands out from the wall of recurring commitments */
+const C_ONEOFF = '#35bd86';
 const isEvent = b => !!b.evId;
+
+/* Anything before today is sealed: no creating, editing, regrading or
+   deleting. Today stays fully editable even for hours already gone. */
+const isPastDay = ds => ds < todayStr();
 
 /* ---------- date helpers ---------- */
 const fmtD = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
@@ -51,12 +66,14 @@ const BLANK = () => ({
   days: {},            // 'YYYY-MM-DD' -> {blocks:[]}  block = {id,start,len,taskId|evId,note,done,grade}
   events: [],          // {id,date,s,e,title,note,rep,until,skip}   s/e = minutes from midnight
   templates: [],       // {id,name,blocks:[]}
+  quotas: [],          // {id,date,text,note,done,created} — QUOTAS tab only, never a Task/Block
   stats: {},
-  settings: { sound: true, dayView: 'timeline' }
+  settings: { sound: true }
 });
 let S = BLANK();
 let cur = todayStr();          // date shown in THE DAY
 let calM = new Date();         // month shown in CALENDAR
+let quotaAnchor = todayStr();  // first day of the 7-day window shown in QUOTAS
 let undoStack = [];
 
 const getDay = ds => (S.days[ds] || (S.days[ds] = { blocks: [] }));
@@ -66,7 +83,10 @@ const dayOf = ds => S.days[ds] || { blocks: [] };
    Score is 0–100: how well you used the time you booked.
    Every block is weighted by its length, ungraded time counts as 0. */
 const taskBlocks = d => d.blocks.filter(b => !isEvent(b));
-const bookedSlots = d => d.blocks.reduce((t, b) => t + b.len, 0);          // events included
+const bookedSlots = d => d.blocks.reduce((t, b) => t + effLen(b), 0);     // events included, graded down
+const rawBooked = d => d.blocks.reduce((t, b) => t + b.len, 0);           // what is on the timeline
+/* Score still weights by the full booked length — an F has to drag the score
+   down, so it cannot also vanish from the denominator. */
 const scoreWeight = d => taskBlocks(d).reduce((t, b) => t + b.len, 0);     // events excluded
 const gradedSlots = d => taskBlocks(d).reduce((t, b) => t + (b.done ? b.len : 0), 0);
 function dayScore(d) {
@@ -81,11 +101,28 @@ function gradedScore(d) {
   if (!g) return 0;
   return Math.round(taskBlocks(d).reduce((t, b) => t + (b.done ? ptsOf(b.grade) * b.len : 0), 0) / g);
 }
-/* RANK 0–10: how full the day is. A full 12h of booked blocks = 10. */
-const DAY_HOURS = 12;
+/* How much of a block's time actually counts once it is graded.
+   F and U hand the time back entirely — you did not spend it on this.
+   D gives half. C and up count in full, as does anything not yet graded. */
+const GRADE_TIME = { A: 1, B: 1, C: 1, D: 0.5, F: 0, U: 0 };
+const effLen = b => (b.done && GRADE_TIME[b.grade] != null) ? b.len * GRADE_TIME[b.grade] : b.len;
+
+/* The day's working window. 9:00a–10:00p unless blocks reach past either
+   edge, in which case the window stretches to hold them. */
+const SOD_DEF = 36, EOD_DEF = 88;
+function dayEdges(d) {
+  let sod = SOD_DEF, eod = EOD_DEF;
+  (d.blocks || []).forEach(b => {
+    if (b.start < sod) sod = b.start;
+    if (b.start + b.len > eod) eod = b.start + b.len;
+  });
+  return { sod: clamp(sod, 0, 95), eod: clamp(eod, 1, SLOTS) };
+}
+const windowSlots = d => { const e = dayEdges(d); return Math.max(4, e.eod - e.sod); };
+
+/* RANK 0–10: how full the working window is, counting only time that stuck. */
 function dayRank(d) {
-  const hrs = bookedSlots(d) / 4;
-  return Math.min(10, Math.round(hrs / DAY_HOURS * 100) / 10);
+  return Math.min(10, Math.round(bookedSlots(d) / windowSlots(d) * 100) / 10);
 }
 /* GOLD 0–1000 = SCORE × RANK */
 const dayGold = d => Math.round(dayScore(d) * dayRank(d));
@@ -95,7 +132,28 @@ const METRICS = {
   gold:  { key: 'gold',  label: 'GOLD',  max: 1000, color: '#ffc93d', fmt: v => Math.round(v).toLocaleString() }
 };
 
-const hasActivity = ds => (S.days[ds] ? S.days[ds].blocks : []).some(b => b.done && !isEvent(b));
+/* A day only counts toward the streak if you graded something yourself —
+   an auto-U day means you planned and then never came back. */
+const hasActivity = ds => (S.days[ds] ? S.days[ds].blocks : []).some(b => b.done && !isEvent(b) && !b.auto);
+
+/* Stamp U on every block left ungraded on a day that has ended. */
+let lastSeal = '';
+function sealPastDays(force) {
+  const t = todayStr();
+  if (!force && lastSeal === t) return false;
+  lastSeal = t;
+  let changed = false;
+  Object.keys(S.days).forEach(ds => {
+    if (!isPastDay(ds)) return;
+    S.days[ds].blocks.forEach(b => {
+      if (isEvent(b) || b.done) return;
+      b.done = true; b.grade = 'U'; b.auto = true;
+      changed = true;
+    });
+  });
+  if (changed) save();
+  return changed;
+}
 function computeStreak() {
   let ds = todayStr();
   if (!hasActivity(ds)) ds = shiftD(ds, -1);   // today isn't over yet — doesn't break it
@@ -120,7 +178,7 @@ const LS_KEY = 'baron.save';
 const LS_LEGACY = 'daylatro.v2';        // pre-Baron key, read once then retired
 let fileHandle = null, fsStatus = 'off', saveTimer = null;
 
-function snapshot() { return JSON.stringify({ v: 4, tasks: S.tasks, days: S.days, events: S.events, templates: S.templates, stats: S.stats, settings: S.settings }); }
+function snapshot() { return JSON.stringify({ v: 4, tasks: S.tasks, days: S.days, events: S.events, templates: S.templates, quotas: S.quotas, stats: S.stats, settings: S.settings }); }
 
 function save() {
   try { localStorage.setItem(LS_KEY, snapshot()); } catch (e) { /* private mode */ }
@@ -141,12 +199,26 @@ function adopt(o) {
     days: o.days || {},
     events: o.events || [],
     templates: o.templates || [],
+    /* v4 saves had two separate features here: S.deadlines (a per-day
+       checklist, array) and S.quotas (per-day-per-task time apportioning,
+       object keyed by date). The quota feature was removed outright — its
+       name is what the checklist now goes by. o.quotas from an old save is
+       the old per-task object shape, not an array, so it's discarded rather
+       than migrated; o.deadlines (if present) becomes the new S.quotas. */
+    quotas: Array.isArray(o.quotas) ? o.quotas : (Array.isArray(o.deadlines) ? o.deadlines : []),
     stats: Object.assign(b.stats, o.stats || {}),
     settings: Object.assign(b.settings, o.settings || {})
   };
   stripCats();
   if (o.v !== 4) migrateToTasks();
+  migrateGrades();
   return true;
+}
+/* the fail grade is F. A build in between briefly called it E — undo that. */
+function migrateGrades() {
+  Object.keys(S.days).forEach(k => (S.days[k].blocks || []).forEach(b => {
+    if (b.grade === 'E') b.grade = 'F';
+  }));
 }
 /* categories are gone — drop any left over in an older save file */
 function stripCats() {
@@ -326,19 +398,45 @@ const taskOf = id => S.tasks.find(t => t.id === id);
 function taskLabel(b) {
   if (isEvent(b)) return b.evTitle || 'Event';
   const t = taskOf(b.taskId);
-  return t ? t.name : 'Deleted task';
+  /* taskName is stamped onto blocks when a task is deleted, so the archive
+     never turns into a wall of "Deleted task" */
+  return t ? t.name : (b.taskName || 'Deleted task');
+}
+/* called before a task is removed, so its history keeps a readable label */
+function stampTaskName(id, name) {
+  Object.keys(S.days).forEach(k => (S.days[k].blocks || []).forEach(b => {
+    if (b.taskId === id) b.taskName = name;
+  }));
+  S.templates.forEach(t => (t.blocks || []).forEach(b => { if (b.taskId === id) b.taskName = name; }));
 }
 function addTask(name) {
   const t = { id: 'tk' + uid() + (taskSeq++), name: String(name || 'New task').trim() || 'New task', hidden: false, created: Date.now() + taskSeq };
   S.tasks.push(t);
   return t;
 }
+/* done  = graded blocks — the record, which can never be erased
+   ahead = blocks still waiting for a grade, which can */
 function taskStats(id) {
-  let slots = 0, count = 0;
-  Object.keys(S.days).forEach(k => (S.days[k].blocks || []).forEach(b => {
-    if (b.taskId === id) { slots += b.len; count++; }
-  }));
-  return { slots: slots, count: count };
+  let slots = 0, count = 0, done = 0, ahead = 0;
+  Object.keys(S.days).forEach(k => {
+    (S.days[k].blocks || []).forEach(b => {
+      if (b.taskId !== id) return;
+      slots += effLen(b); count++;
+      if (b.done) done++; else ahead++;
+    });
+  });
+  return { slots: slots, count: count, done: done, ahead: ahead };
+}
+/* wipe a task's ungraded blocks on days that are still editable */
+function dropTaskBlocks(id) {
+  let n = 0;
+  Object.keys(S.days).forEach(k => {
+    if (isPastDay(k)) return;
+    const d = S.days[k], before = d.blocks.length;
+    d.blocks = d.blocks.filter(b => !(b.taskId === id && !b.done));
+    n += before - d.blocks.length;
+  });
+  return n;
 }
 const visibleTasks = () => S.tasks.filter(t => !t.hidden);
 
@@ -349,9 +447,10 @@ function occupancy(d, alsoEvents, ds) {
   if (alsoEvents) eventsOn(ds).forEach(ev => { for (let i = Math.floor(ev.s / 15); i < Math.ceil(ev.e / 15) && i < SLOTS; i++) if (!a[i]) a[i] = 'EV'; });
   return a;
 }
-function carve(d, start, end) {
+function carve(d, start, end, keepEvents) {
   const out = [];
   d.blocks.forEach(b => {
+    if (keepEvents && isEvent(b)) { out.push(b); return; }   // event blocks never cannibalize each other
     const bs = b.start, be = b.start + b.len;
     if (be <= start || bs >= end) { out.push(b); return; }
     if (bs < start) out.push(Object.assign({}, b, { id: uid(), len: start - bs }));
@@ -367,18 +466,72 @@ function addBlock(ds, start, len, taskId, note) {
   d.blocks.sort((x, y) => x.start - y.start);
   return b;
 }
-/* pull a calendar event into the day as a red, ungradeable block */
-function addEventBlock(ds, ev) {
-  const start = clamp(Math.floor(ev.s / 15), 0, 95);
-  const end = clamp(Math.max(start + 1, Math.ceil(ev.e / 15)), 1, 96);
-  const d = getDay(ds);
-  carve(d, start, end);
-  const b = { id: uid(), start: start, len: end - start, evId: ev.id, evTitle: ev.title, note: ev.note || '', done: false, grade: null };
-  d.blocks.push(b);
-  d.blocks.sort((x, y) => x.start - y.start);
-  return b;
+/* Events are never "pulled" — every occurrence of an event IS an event block,
+   always. syncEventsOn(ds) is the one place that keeps a date's event blocks
+   true to S.events: it adds any occurrence missing a block, carving room for
+   it against TASK blocks only (an event owns the calendar, so it wins a
+   conflict with a plain block same as a manual block always could) — it
+   never carves into an existing EVENT block, so two genuinely overlapping
+   calendar events (a real double-booking) both keep their own block instead
+   of the second one silently truncating/deleting the first — and drops any
+   event block whose event no longer happens there (covers cancelling,
+   skipping, ending a series, and moving an event's date/time/repeat — all in
+   one place). Sealed past days are never rewritten. Cheap and idempotent —
+   safe to call on every render of a date. */
+function syncEventsOn(ds) {
+  if (isPastDay(ds)) return false;
+  const occ = eventsOn(ds);
+  const d = S.days[ds];
+  if (!occ.length) {
+    if (!d || !d.blocks.some(isEvent)) return false;
+    const before = d.blocks.length;
+    d.blocks = d.blocks.filter(b => !isEvent(b));
+    return d.blocks.length !== before;
+  }
+  const day = getDay(ds);
+  let changed = false;
+  occ.forEach(ev => {
+    const start = clamp(Math.floor(ev.s / 15), 0, 95);
+    const end = clamp(Math.max(start + 1, Math.ceil(ev.e / 15)), 1, 96);
+    const evNote = ev.note || '';
+    /* an existing block only counts as "synced" if it still matches the
+       event's CURRENT time/title/note — a retime/rename/renote leaves the
+       old block sitting there stale otherwise, since a presence-only check
+       (just "does a block with this evId exist") never notices the event
+       moved out from under it. `matches.length !== 1` also mops up any
+       leftover duplicate event-blocks from earlier bugs. */
+    const matches = day.blocks.filter(b => b.evId === ev.id);
+    const stale = matches.length !== 1 || matches[0].start !== start || matches[0].len !== (end - start) ||
+      matches[0].evTitle !== ev.title || matches[0].note !== evNote;
+    if (!stale) return;
+    if (matches.length) day.blocks = day.blocks.filter(b => b.evId !== ev.id);
+    carve(day, start, end, true);
+    day.blocks.push({ id: uid(), start: start, len: end - start, evId: ev.id, evTitle: ev.title, note: evNote, done: false, grade: null });
+    changed = true;
+  });
+  const before = day.blocks.length;
+  day.blocks = day.blocks.filter(b => !isEvent(b) || occ.some(ev => ev.id === b.evId));
+  if (day.blocks.length !== before) changed = true;
+  if (changed) day.blocks.sort((a, b) => a.start - b.start);
+  return changed;
 }
-const isPulled = (ds, evId) => dayOf(ds).blocks.some(b => b.evId === evId);
+/* sweep every date that already has an S.days entry — call after any edit to
+   S.events so already-touched days (past renders of WEEKLY/MONTHLY/DAILY)
+   don't go stale until next visited */
+function syncAllEventBlocks() {
+  let changed = false;
+  /* Every date that already has a day entry, PLUS every event's own anchor
+     date (`ev.date`) — this is what actually finds and materializes an old
+     "sitting there unpulled" event, which by definition has no S.days entry
+     yet (nothing was ever placed on that date). A recurring event's *other*
+     occurrences are intentionally not pre-materialized here — they can't be,
+     recurrence can be infinite — they sync lazily the moment their date is
+     ever rendered (DAILY/MONTHLY/WEEKLY all call syncEventsOn per date). */
+  const dates = new Set(Object.keys(S.days));
+  S.events.forEach(ev => { if (ev.date) dates.add(ev.date); });
+  dates.forEach(ds => { if (syncEventsOn(ds)) changed = true; });
+  return changed;
+}
 const findBlock = (ds, id) => dayOf(ds).blocks.find(b => b.id === id);
 
 /* ---------- events & recurrence ---------- */
@@ -425,5 +578,123 @@ function upcoming(fromDs, nDays, limit) {
   }
   return out;
 }
+/* the single nearest event that has not started yet — skips anything on
+   `fromDs` that is already in progress or already over (s <= now), so a
+   meeting that started 10 minutes ago never shows as "upcoming". Every day
+   after `fromDs` has no such filter — nothing there could have started yet. */
+function nextUpcomingEvent(fromDs) {
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  for (let i = 0; i < 60; i++) {
+    const ds = shiftD(fromDs, i);
+    const evs = eventsOn(ds).filter(e => i > 0 || e.s > nowMin);
+    if (evs.length) return evs[0];
+  }
+  return null;
+}
 const isRepeating = ev => ev && ev.rep && ev.rep !== 'none';
+/* one-offs first, then repeats, each by start time */
+const calOrder = evs => evs.slice().sort((a, b) =>
+  (isRepeating(a) ? 1 : 0) - (isRepeating(b) ? 1 : 0) || a.s - b.s || a.e - b.e);
 const minLabel = m => { const h = Math.floor(m / 60) % 24, mm = m % 60; const ap = h < 12 ? 'a' : 'p'; const hh = h % 12 || 12; return hh + ':' + pad(mm) + ap; };
+
+/* ---------- quotas ----------
+   A quota is a homework/milestone checklist item pinned to one date. It is
+   deliberately not a Task (no taskId, never instantiated into a block) and is
+   never shown outside the QUOTAS tab (and its mirror in the rail's own
+   "today" list). This used to be called a "deadline"; the old "quota" name
+   (per-task, per-day time apportioning) belonged to a different feature that
+   has been removed outright — see §8/§13 in CONTEXT.md for the history. */
+let quotaSeq = 0;
+const quotasOn = ds => S.quotas.filter(x => x.date === ds).sort((a, b) => a.created - b.created);
+function addQuota(ds, text) {
+  const t = String(text || '').trim(); if (!t) return null;
+  const item = { id: uid(), date: ds, text: t, note: '', done: false, created: Date.now() + (quotaSeq++) };
+  S.quotas.push(item);
+  return item;
+}
+function toggleQuota(id) { const it = S.quotas.find(x => x.id === id); if (it) it.done = !it.done; }
+function deleteQuota(id) { S.quotas = S.quotas.filter(x => x.id !== id); }
+/* label for the QUOTAS tab's 7-day window, e.g. "AUG 21 – 27" or, when the
+   window crosses a month, "AUG 29 – SEP 4" */
+function quotaRangeLabel(days) {
+  const a = parseD(days[0]), b = parseD(days[days.length - 1]);
+  const mA = MON[a.getMonth()].slice(0, 3).toUpperCase(), mB = MON[b.getMonth()].slice(0, 3).toUpperCase();
+  return a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear()
+    ? mA + ' ' + a.getDate() + ' – ' + b.getDate()
+    : mA + ' ' + a.getDate() + ' – ' + mB + ' ' + b.getDate();
+}
+
+/* the calendar week (Sunday..Saturday) containing `ds` — distinct from the
+   QUOTAS tab's "THIS WEEK", which means the 7 days starting today, not a
+   Sunday-anchored calendar week. Kept private to this readout. */
+function sundayOf(ds) {
+  const d = parseD(ds);
+  const start = new Date(d); start.setDate(d.getDate() - d.getDay());
+  return fmtD(start);
+}
+/* DAILY's side panel (`.dayinfo`): per-task DONE (graded) time, TODAY and
+   THIS (Sunday–Saturday) WEEK — sorted most time first, only tasks with at
+   least one done block in the period. Time is *effective* time, not raw
+   block length: it runs every done block through `effLen`, the same
+   grade-weighting the score/rank arithmetic uses everywhere else — F/U hand
+   the whole block back (0%), D half (50%), C/B/A count in full (100%). This
+   matters here specifically: without it, a 2-hour block graded D would
+   still read as 2 hours of "time done" on this task, which both
+   overstates the task's tracked time and removes any cost to grading it
+   low — the same block a moment ago cost you rank/score for exactly that
+   half. Events never appear here (`taskBlocks` already excludes them) — see
+   doneEventBreakdownOn/Week below for their own, separate readout; ungraded
+   blocks aren't "done" yet, so they don't count either. */
+function doneTaskBreakdownOn(ds) {
+  const per = {};
+  taskBlocks(dayOf(ds)).filter(b => b.done).forEach(b => { per[b.taskId] = (per[b.taskId] || 0) + effLen(b); });
+  return Object.keys(per)
+    .map(tid => ({ task: taskOf(tid), slots: per[tid] }))
+    .filter(x => x.task)
+    .sort((a, b) => b.slots - a.slots || a.task.name.localeCompare(b.task.name));
+}
+function doneTaskBreakdownWeek(ds) {
+  const sun = sundayOf(ds);
+  const per = {};
+  for (let i = 0; i < 7; i++) {
+    taskBlocks(dayOf(shiftD(sun, i))).filter(b => b.done).forEach(b => { per[b.taskId] = (per[b.taskId] || 0) + effLen(b); });
+  }
+  return Object.keys(per)
+    .map(tid => ({ task: taskOf(tid), slots: per[tid] }))
+    .filter(x => x.task)
+    .sort((a, b) => b.slots - a.slots || a.task.name.localeCompare(b.task.name));
+}
+/* same idea, for events — grouped by `evId` (an event's identity survives a
+   mid-series retitle; `evTitle` on any one block is only that block's
+   point-in-time label, so the most recently-seen title wins). Events are
+   never "done" — sealPastDays explicitly skips them (`if (isEvent(b) ||
+   b.done) return;`) and there is no grading UI for them at all — so there is
+   no done-filter here, every event block that exists on the day counts.
+   `effLen(b)` still resolves correctly: it only discounts when `b.done` is
+   true, which for an event block is never, so it always returns the block's
+   raw length — same call as the task breakdown, for one shared code path,
+   even though the discount never actually fires here. */
+function doneEventBreakdownOn(ds) {
+  const per = {}, name = {};
+  dayOf(ds).blocks.filter(isEvent).forEach(b => {
+    per[b.evId] = (per[b.evId] || 0) + effLen(b);
+    name[b.evId] = b.evTitle || 'Event';
+  });
+  return Object.keys(per)
+    .map(id => ({ title: name[id], slots: per[id] }))
+    .sort((a, b) => b.slots - a.slots || a.title.localeCompare(b.title));
+}
+function doneEventBreakdownWeek(ds) {
+  const sun = sundayOf(ds);
+  const per = {}, name = {};
+  for (let i = 0; i < 7; i++) {
+    dayOf(shiftD(sun, i)).blocks.filter(isEvent).forEach(b => {
+      per[b.evId] = (per[b.evId] || 0) + effLen(b);
+      name[b.evId] = b.evTitle || 'Event';
+    });
+  }
+  return Object.keys(per)
+    .map(id => ({ title: name[id], slots: per[id] }))
+    .sort((a, b) => b.slots - a.slots || a.title.localeCompare(b.title));
+}

@@ -3,8 +3,10 @@
 function div(cls, txt) { const d = document.createElement('div'); if (cls) d.className = cls; if (txt != null) d.textContent = txt; return d; }
 
 function renderAll() {
-  renderRail(); renderDateNav();
+  syncEventsOn(cur);
+  renderRail(); renderDateNav(); renderAgenda();
   if (!$('#viewDay').hidden) renderDay();
+  else if (!$('#viewWeek').hidden) renderQuotasList();
   else if (!$('#viewCal').hidden) renderCal();
   else if (!$('#viewTasks').hidden) renderTasks();
   else renderStats();
@@ -20,10 +22,16 @@ function renderRail() {
   const tb = taskBlocks(d);
   const done = tb.filter(b => b.done).length;
   $('#stBlocks').textContent = done + '/' + tb.length;
-  $('#stBooked').textContent = bookedSlots(d) ? durLabel(bookedSlots(d)) : '0h';
+  const eff = bookedSlots(d), raw = rawBooked(d);
+  $('#stBooked').textContent = eff ? durLabel(eff) : '0h';
+  $('#stBooked').parentNode.title = raw !== eff
+    ? durLabel(raw) + ' on the timeline, ' + durLabel(eff) + ' after F/U/D adjustments'
+    : 'time that counts';
   const rk = dayRank(d);
+  const ed = dayEdges(d);
   $('#stRank').textContent = rk ? rk.toFixed(1) : '0';
-  $('#stRank').parentNode.title = durLabel(bookedSlots(d)) + ' booked of ' + DAY_HOURS + 'h';
+  $('#stRank').parentNode.title = durLabel(eff) + ' of the ' + durLabel(windowSlots(d)) +
+    ' window (' + slotLabel(ed.sod) + '–' + slotLabel(ed.eod % SLOTS) + ')';
   $('#stGold').textContent = dayGold(d).toLocaleString();
   $('#stGold').parentNode.title = 'score ' + sc + ' × rank ' + rk.toFixed(1);
   $('#stStreak').textContent = computeStreak();
@@ -36,6 +44,9 @@ function renderRail() {
       : left ? gradedScore(d) + ' on what you graded · ' + left + ' left'
         : 'whole day graded';
   $('#btnSound').textContent = S.settings.sound ? '♪' : '✕';
+  const past = isPastDay(cur);
+  $('#btnQuick').disabled = past;
+  $('#btnQuick').title = past ? 'past days are archived' : '';
 
   const pend = pendingBlocks();
   const gb = $('#btnGrade');
@@ -63,97 +74,96 @@ function renderDateNav() {
   fitDateNav();
 }
 
-/* the date selector ends where the CALENDAR tab above it ends. measured rather
-   than hard-coded, so it still lines up whatever the font does. */
-function fitDateNav() {
-  const cal = $('.tab[data-view="cal"]'), dn = $('#viewDay .datenav');
-  if (!cal || !dn || $('#viewDay').hidden) return;
-  dn.style.width = '';
-  const w = Math.round(cal.getBoundingClientRect().right - dn.getBoundingClientRect().left);
-  if (w > 140) dn.style.width = w + 'px';
+/* Every date-nav-style bar (DAILY's today bar, QUOTAS' date-range bar,
+   CALENDAR's month bar) ends exactly where some tab button above it ends —
+   measured rather than hard-coded, so it still lines up whatever the font
+   does. `el` is always the first item in its toolbar, so its own left edge
+   already coincides with the tab row's left edge; only the right edge needs
+   fitting. */
+function fitNavBar(el, tab, view) {
+  if (!el || !tab || !view || view.hidden) return;
+  el.style.width = '';
+  const w = Math.round(tab.getBoundingClientRect().right - el.getBoundingClientRect().left);
+  if (w > 140) el.style.width = w + 'px';
+}
+function fitDateNav() { fitNavBar($('#viewDay .datenav'), $('.tab[data-view="week"]'), $('#viewDay')); }
+function fitQuotaNav() { fitNavBar($('#quotaNav'), $('.tab[data-view="tasks"]'), $('#viewWeek')); }
+function fitMonthNav() { fitNavBar($('#monthNav'), $('.tab[data-view="tasks"]'), $('#viewCal')); }
+function fitAllNavBars() { fitDateNav(); fitQuotaNav(); fitMonthNav(); }
+
+/* ---------------- THE DAY ----------------
+   Rows are no longer a uniform height: everything outside the day's working
+   window is collapsed to 0px by default (hidden, not squeezed) and only
+   opens to full height when its SOD/EOD marker is clicked. That kills the
+   old "y / 22" arithmetic, so the grid publishes its geometry here and every
+   pixel calculation goes through slotY / slotAtY. */
+let GEO = { tops: [], h: [], sod: SOD_DEF, eod: EOD_DEF, total: 0 };
+let sodOpen = false, eodOpen = false;   // click a marker to reveal the hours beyond it
+
+function buildGeo(d) {
+  const e = dayEdges(d);
+  const h = new Array(SLOTS), tops = new Array(SLOTS + 1);
+  tops[0] = 0;
+  for (let i = 0; i < SLOTS; i++) {
+    h[i] = i < e.sod ? (sodOpen ? ROWH : 0) : i >= e.eod ? (eodOpen ? ROWH : 0) : ROWH;
+    tops[i + 1] = tops[i] + h[i];
+  }
+  GEO = { tops: tops, h: h, sod: e.sod, eod: e.eod, total: tops[SLOTS] };
+  return GEO;
+}
+function toggleEdge(which) {
+  if (which === 'sod') sodOpen = !sodOpen; else eodOpen = !eodOpen;
+  renderDay(); sfx('click');
+}
+/* pixel top of a (possibly fractional) slot */
+function slotY(f) {
+  const i = clamp(Math.floor(f), 0, SLOTS - 1);
+  return GEO.tops[i] + (f - i) * GEO.h[i];
+}
+/* which slot a pixel offset lands in */
+function slotAtY(y) {
+  const t = GEO.tops;
+  if (y <= 0) return 0;
+  for (let i = 0; i < SLOTS; i++) if (y < t[i + 1]) return i;
+  return SLOTS - 1;
 }
 
-/* ---------------- THE DAY ---------------- */
 function nowSlotFloat() { const n = new Date(); return (n.getHours() * 60 + n.getMinutes()) / 15; }
 
 function renderDay() {
-  const isList = S.settings.dayView === 'list';
-  $('#gridwrap').hidden = isList;
-  $('#listwrap').hidden = !isList;
-  $$('#viewDay .seg').forEach(s => s.classList.toggle('on', (s.dataset.dv === 'list') === isList));
-  if (isList) renderList(); else renderTimeline();
+  renderTimeline();
+  renderDayStats();
 }
 
-/* ---- LIST: every booked block, top to bottom, nothing else ---- */
-function renderList() {
-  const L = $('#list'); L.innerHTML = '';
-  const d = dayOf(cur);
-  const nowM = new Date().getHours() * 60 + new Date().getMinutes();
-  const isToday = cur === todayStr();
-
-  const items = [];
-  d.blocks.forEach(b => items.push({ k: 'b', s: b.start * 15, e: (b.start + b.len) * 15, b: b }));
-  eventsOn(cur).filter(ev => !isPulled(cur, ev.id)).forEach(ev => items.push({ k: 'e', s: ev.s, e: ev.e, ev: ev }));
-  items.sort((x, y) => x.s - y.s || x.e - y.e);
-
-  const hdr = div('lhdr');
-  hdr.innerHTML = '<b>' + prettyD(cur) + '</b><span>' + items.length + ' ITEM' + (items.length === 1 ? '' : 'S') + '  ·  ' + (bookedSlots(d) ? durLabel(bookedSlots(d)) : '0m') + ' BOOKED</span>';
-  L.appendChild(hdr);
-
-  if (!items.length) {
-    const e = div('lempty', 'nothing booked — hit + BLOCK');
-    e.style.cursor = 'pointer';
-    e.onclick = () => openBlockEditor(null, isToday ? clamp(Math.floor(nowSlotFloat()), 0, 92) : 36, 4);
-    L.appendChild(e);
-    return;
-  }
-
-  let prevEnd = null;
-  items.forEach(it => {
-    if (prevEnd != null && it.s - prevEnd >= 15) {
-      const gs = prevEnd, ge = it.s;
-      const gap = div('lgap');
-      gap.innerHTML = '<i></i><span>' + durLabel((ge - gs) / 15) + ' free</span><i></i>';
-      gap.onclick = () => openBlockEditor(null, Math.floor(gs / 15), Math.max(1, (ge - gs) / 15));
-      L.appendChild(gap);
-    }
-    if (it.e > (prevEnd || 0)) prevEnd = it.e;
-
-    if (it.k === 'e') {
-      const r = div('lrow evt');
-      r.innerHTML = '<span class="tm">' + minLabel(it.s) + ' – ' + minLabel(it.e) + '</span>' +
-        '<span class="ti">' + esc(it.ev.title) + '</span>' +
-        '<span class="du">' + durLabel((it.e - it.s) / 15) + '</span>' +
-        '<span class="evtag">NOT PULLED</span>';
-      r.onclick = () => openTodayEvent(it.ev, false);
-      L.appendChild(r);
-      return;
-    }
-
-    const b = it.b;
-    if (isEvent(b)) {
-      const r = div('lrow evt');
-      r.innerHTML = '<span class="tm">' + slotLabel(b.start) + ' – ' + slotLabel(b.start + b.len) + '</span>' +
-        '<span class="ti">' + esc(taskLabel(b)) + (b.note ? '<em>' + esc(b.note) + '</em>' : '') + '</span>' +
-        '<span class="du">' + durLabel(b.len) + '</span>' +
-        '<span class="evtag">EVENT</span>';
-      r.onclick = () => openTodayEvent(b, true);
-      L.appendChild(r);
-      return;
-    }
-    const pending = isToday && !b.done && it.e <= nowM;
-    const nowRow = isToday && nowM >= it.s && nowM < it.e;
-    const r = div('lrow' + (b.done ? ' done' : '') + (pending ? ' pending' : '') + (nowRow ? ' nowrow' : ''));
-    r.style.setProperty('--c', C_BLOCK);
-    r.dataset.id = b.id;
-    r.innerHTML = '<span class="tm">' + slotLabel(b.start) + ' – ' + slotLabel(b.start + b.len) + '</span>' +
-      '<span class="ti">' + esc(taskLabel(b)) + (b.note ? '<em>' + esc(b.note) + '</em>' : '') + '</span>' +
-      '<span class="du">' + durLabel(b.len) + '</span>' +
-      (b.done
-        ? '<span class="gr outline" data-act="tick" style="background:' + colOf(b.grade) + '">' + b.grade + '</span>'
-        : '<span class="tick" data-act="tick" title="grade this block">✓</span>');
-    r.onclick = e => { if (e.target.dataset.act === 'tick') openGrade(b.id); else openBlockEditor(b.id); };
-    L.appendChild(r);
+/* ---- side panel: per-event + per-task DONE time, TODAY / WEEK split,
+   always for the real "today" (not whatever day `cur` is currently
+   viewing) — see the QUOTAS tab's own "THIS WEEK" for the deliberately-
+   different rolling-7-day reading. WEEK here is the Sunday–Saturday
+   calendar week containing today. Events (red) are their own group, sorted
+   most time first, always above tasks (blue, also sorted most time first)
+   — two bands, not one interleaved-by-time list (see doneEventBreakdownOn/
+   Week and doneTaskBreakdownOn/Week in 03-core.js for the grade-weighting
+   and inclusion rules, which differ slightly: events have no "done"
+   concept, so every existing event block counts). A period with nothing to
+   show gets a small empty-state line instead of an empty box. Display-only
+   — nothing here is clickable/editable. */
+function renderDayStats() {
+  const t = todayStr();
+  renderDnList('dnTodayList', doneEventBreakdownOn(t), doneTaskBreakdownOn(t));
+  renderDnList('dnWeekList', doneEventBreakdownWeek(t), doneTaskBreakdownWeek(t));
+}
+function renderDnList(id, evRows, taskRows) {
+  const L = $('#' + id); L.innerHTML = '';
+  if (!evRows.length && !taskRows.length) { L.appendChild(div('dnempty', 'nothing here yet')); return; }
+  evRows.forEach(r => {
+    const row = div('ttrow evt');
+    row.innerHTML = '<span class="nm">' + esc(r.title) + '</span><span class="amt">' + durLabel(r.slots) + '</span>';
+    L.appendChild(row);
+  });
+  taskRows.forEach(r => {
+    const row = div('ttrow');
+    row.innerHTML = '<span class="nm">' + esc(r.task.name) + '</span><span class="amt">' + durLabel(r.slots) + '</span>';
+    L.appendChild(row);
   });
 }
 
@@ -161,22 +171,42 @@ function renderTimeline() {
   const g = $('#grid'); g.innerHTML = '';
   const d = dayOf(cur);
   const f = document.createDocumentFragment();
+  const G = buildGeo(d);
+  g.style.gridTemplateRows = G.h.map(x => x + 'px').join(' ');
 
-  const lines = div('lines'); f.appendChild(lines);
+  /* rules and the dimmed out-of-hours bands, all drawn from the geometry */
+  const lines = div('lines');
+  if (G.sod > 0) {
+    const z = div('zone'); z.style.top = '0px'; z.style.height = G.tops[G.sod] + 'px'; lines.appendChild(z);
+  }
+  if (G.eod < SLOTS) {
+    const z = div('zone'); z.style.top = G.tops[G.eod] + 'px'; z.style.height = (G.total - G.tops[G.eod]) + 'px'; lines.appendChild(z);
+  }
+  for (let i = 0; i <= SLOTS; i++) {
+    if ((i < G.sod && !sodOpen) || (i >= G.eod && !eodOpen)) continue;   // collapsed — 0px, nothing to draw
+    const ln = div(i % 4 === 0 ? 'hline' : 'qline');
+    ln.style.top = G.tops[i] + 'px';
+    lines.appendChild(ln);
+  }
+  f.appendChild(lines);
 
   for (let h = 0; h < 24; h++) {
-    const tl = div('tl' + (h === 12 ? ' noon' : ''));
+    const tl = div('tl' + (h === 12 ? ' noon' : '') + (h * 4 < G.sod || h * 4 >= G.eod ? ' dim' : ''));
     tl.style.gridRow = (h * 4 + 1) + ' / span 4';
     tl.textContent = slotLabel(h * 4);
     f.appendChild(tl);
   }
 
-  const occ = occupancy(d, false);
-  for (let i = 0; i < SLOTS; i++) {
-    if (occ[i]) continue;
-    const c = div('cell'); c.style.gridRow = String(i + 1);
-    c.dataset.slot = String(i); c.dataset.t = slotLabel(i);
-    f.appendChild(c);
+  const sealed = isPastDay(cur);
+  g.classList.toggle('sealed', sealed);
+  if (!sealed) {
+    const occ = occupancy(d, false);
+    for (let i = 0; i < SLOTS; i++) {
+      if (occ[i]) continue;
+      const c = div('cell'); c.style.gridRow = String(i + 1);
+      c.dataset.slot = String(i); c.dataset.t = slotLabel(i);
+      f.appendChild(c);
+    }
   }
 
   const nowF = nowSlotFloat(), isToday = cur === todayStr();
@@ -186,30 +216,26 @@ function renderTimeline() {
     f.appendChild(el);
   });
 
-  if (!d.blocks.length) { const e = div('emptyday', 'empty deck — drag anywhere to deal a block'); f.appendChild(e); }
+  if (!d.blocks.length) {
+    const e = div('emptyday', sealed ? 'nothing was booked on this day' : 'empty deck — drag anywhere to deal a block');
+    e.style.top = slotY(G.sod + 8) + 'px';
+    f.appendChild(e);
+  }
 
-  /* event rail */
-  const rail = div('rail3'); rail.style.gridRow = '1 / -1';
-  const evs = eventsOn(cur).filter(ev => !isPulled(cur, ev.id));
-  const lanes = [];
-  evs.forEach(ev => {
-    let li = 0; while (lanes[li] != null && lanes[li] > ev.s) li++;
-    lanes[li] = ev.e;
-    const c = div('evc');
-    c.style.setProperty('--c', C_EVENT);
-    c.style.top = (ev.s / 15 * ROWH) + 'px';
-    c.style.height = Math.max(20, (ev.e - ev.s) / 15 * ROWH - 2) + 'px';
-    c.style.left = (8 + li * 10) + 'px';
-    c.style.zIndex = String(5 + li);
-    c.dataset.ev = ev.id;
-    c.innerHTML = '<b>' + esc(minLabel(ev.s)) + '</b>' + esc(ev.title);
-    rail.appendChild(c);
+  /* the working window's edges — click either badge to reveal (or re-hide)
+     the hours beyond it. Icon sits at the left of the line, like the now-line's. */
+  [['SOD', G.sod, 'sod', sodOpen], ['EOD', G.eod, 'eod', eodOpen]].forEach(pair => {
+    const m = div('edge');
+    m.dataset.edge = pair[2];
+    m.style.top = slotY(pair[1]) + 'px';
+    m.innerHTML = '<b class="outline" data-act="toggle">' + pair[0] + (pair[3] ? ' ▾' : ' ▸') + '</b><i></i>';
+    m.title = (pair[0] === 'SOD' ? 'start of day — ' + slotLabel(G.sod) : 'end of day — ' + slotLabel(G.eod % SLOTS)) +
+      '  ·  click to ' + (pair[3] ? 'hide' : 'show') + ' the hours ' + (pair[0] === 'SOD' ? 'before' : 'after') + ' it';
+    f.appendChild(m);
   });
-  if (!evs.length) { const n = div('', 'no events to pull'); n.style.cssText = 'position:absolute;top:8px;left:10px;font-size:10px;opacity:.4;font-weight:800;letter-spacing:1px;line-height:1.3'; rail.appendChild(n); }
-  f.appendChild(rail);
 
   if (isToday) {
-    const nl = div('nowline'); nl.style.top = (nowF * ROWH) + 'px';
+    const nl = div('nowline'); nl.style.top = slotY(nowF) + 'px';
     nl.innerHTML = '<i></i><b class="outline">' + esc(minLabel(new Date().getHours() * 60 + new Date().getMinutes())) + '</b>';
     f.appendChild(nl);
   }
@@ -221,7 +247,8 @@ function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ 
 
 function blockEl(b, isNow) {
   const ev = isEvent(b);
-  const el = div('blk' + (b.len < 2 ? ' tiny' : '') + (!ev && b.done ? ' done' : '') + (isNow ? ' now' : '') + (ev ? ' evt' : ''));
+  const sealed = isPastDay(cur);
+  const el = div('blk' + (b.len < 2 ? ' tiny' : '') + (!ev && b.done ? ' done' : '') + (isNow ? ' now' : '') + (ev ? ' evt' : '') + (sealed ? ' locked' : ''));
   el.style.gridRow = (b.start + 1) + ' / span ' + b.len;
   el.style.setProperty('--c', ev ? C_EVENT : C_BLOCK);
   el.dataset.id = b.id;
@@ -230,29 +257,28 @@ function blockEl(b, isNow) {
   /* the note earns a line of its own once the block is tall enough to hold it */
   if (b.note && b.len >= 3) el.appendChild(div('note', b.note));
   if (ev) {
-    const tag = div('evtagt', 'EVENT');
-    el.appendChild(tag);
+    el.appendChild(div('evtagt', 'EVENT'));
   } else if (b.done) {
     const gr = div('grade outline', b.grade);
     gr.style.background = colOf(b.grade);
-    gr.dataset.act = 'tick';
+    if (!sealed) gr.dataset.act = 'tick';
     el.appendChild(gr);
   } else {
     const tk = div('tick', '✓'); tk.dataset.act = 'tick'; tk.title = 'grade this block';
     el.appendChild(tk);
   }
-  const rz = div('rz'); rz.dataset.act = 'rz'; el.appendChild(rz);
+  if (!sealed) { const rz = div('rz'); rz.dataset.act = 'rz'; el.appendChild(rz); }
   return el;
 }
 
 /* ---------------- painting & dragging ---------------- */
 let paint = null, resizing = null;
-function slotFromEvent(e) { const r = $('#grid').getBoundingClientRect(); return clamp(Math.floor((e.clientY - r.top) / ROWH), 0, SLOTS - 1); }
+function slotFromEvent(e) { const r = $('#grid').getBoundingClientRect(); return slotAtY(e.clientY - r.top); }
 function preview(a, b) {
   let p = $('#pv');
   if (!p) { p = div('paintpv'); p.id = 'pv'; p.innerHTML = '<b></b>'; $('#grid').appendChild(p); }
   const s = Math.min(a, b), e = Math.max(a, b) + 1;
-  p.style.top = (s * ROWH) + 'px'; p.style.height = (e - s) * ROWH + 'px';
+  p.style.top = slotY(s) + 'px'; p.style.height = (slotY(e) - slotY(s)) + 'px';
   p.querySelector('b').textContent = slotLabel(s) + ' – ' + slotLabel(e) + '  (' + durLabel(e - s) + ')';
   return [s, e];
 }
@@ -262,13 +288,16 @@ function bindGrid() {
   const g = $('#grid');
   g.addEventListener('pointerdown', e => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
+    const edgeB = e.target.closest('.edge b[data-act="toggle"]');
+    if (edgeB) { e.preventDefault(); toggleEdge(edgeB.closest('.edge').dataset.edge); return; }
     const bEl = e.target.closest('.blk');
     if (bEl) {
       const bb = findBlock(cur, bEl.dataset.id);
       const act = e.target.dataset.act;
-      if (bb && isEvent(bb) && act !== 'rz') { e.preventDefault(); openTodayEvent(bb, true); return; }
+      if (bb && isEvent(bb) && act !== 'rz') { e.preventDefault(); openTodayEvent(bb); return; }
       if (act === 'tick') { e.preventDefault(); openGrade(bEl.dataset.id); return; }
       if (act === 'rz') {
+        if (isPastDay(cur)) return;
         e.preventDefault();
         const b = findBlock(cur, bEl.dataset.id);
         if (b) { resizing = { id: b.id, start: b.start, len: b.len }; g.setPointerCapture(e.pointerId); preview(b.start, b.start + b.len - 1); }
@@ -276,8 +305,7 @@ function bindGrid() {
       }
       openBlockEditor(bEl.dataset.id); return;
     }
-    const evEl = e.target.closest('.evc');
-    if (evEl) { const ev = eventsOn(cur).find(x => x.id === evEl.dataset.ev); if (ev) openTodayEvent(ev, false); return; }
+    if (isPastDay(cur)) return;
     const cell = e.target.closest('.cell'); if (!cell) return;
     const slot = +cell.dataset.slot;
     if (e.pointerType !== 'mouse') { openBlockEditor(null, slot, Math.min(4, SLOTS - slot)); return; }
@@ -347,7 +375,8 @@ function taskOptions(sel) {
 
 function openBlockEditor(id, start, len) {
   const b = id ? findBlock(cur, id) : null;
-  if (b && isEvent(b)) { openTodayEvent(b, true); return; }
+  if (b && isEvent(b)) { openTodayEvent(b); return; }
+  if (isPastDay(cur)) { if (b) openArchivedBlock(b); else toast('Past days are archived'); return; }
   const st = b ? b.start : start, ln = b ? b.len : (len || 4);
   const sel = b ? b.taskId : (S.tasks.filter(t => !t.hidden).length === 1 ? S.tasks.filter(t => !t.hidden)[0].id : '');
   openModal(
@@ -407,45 +436,47 @@ function openBlockEditor(id, start, len) {
   M.querySelector('[data-x]').onclick = closeModal;
 }
 
-/* An event seen from TODAY. Everything about it is owned by the CALENDAR tab,
-   so here it is read-only: you may only pull it into the day or cancel it.
-   `pulled` = we are looking at an event block that is already on the timeline. */
-function openTodayEvent(evOrBlock, pulled) {
-  const isBlk = pulled;
-  const title = isBlk ? (evOrBlock.evTitle || 'Event') : evOrBlock.title;
-  const note = evOrBlock.note || '';
-  const evId = isBlk ? evOrBlock.evId : evOrBlock.id;
-  const base = S.events.find(e => e.id === evId);
-  const timeTxt = isBlk
-    ? slotLabel(evOrBlock.start) + ' – ' + slotLabel(evOrBlock.start + evOrBlock.len)
-    : minLabel(evOrBlock.s) + ' – ' + minLabel(evOrBlock.e);
+/* A block on a day that has already ended: look, don't touch. */
+function openArchivedBlock(b) {
+  const g = gradeOf(b.grade);
+  openModal(
+    '<h3>🔒 ARCHIVED<button class="btn sm x" data-x>✕</button></h3>' +
+    '<div class="field"><label>TASK</label><input class="inp ro" value="' + esc(taskLabel(b)) + '" readonly></div>' +
+    '<div class="field"><label>WHEN</label><input class="inp ro" value="' + esc(rangeLabel(b.start, b.len)) + '" readonly></div>' +
+    (b.note ? '<div class="field"><label>NOTE</label><textarea class="inp ro" readonly>' + esc(b.note) + '</textarea></div>' : '') +
+    '<div class="li"><span>Grade</span><span class="amt" style="color:' + g.color + '">' + g.g + ' — ' + g.label + '</span></div>' +
+    '<div class="li" style="margin-top:6px"><span>Counts toward the day at</span><span class="amt">' + g.pts + '%</span></div>' +
+    '<div class="hint" style="margin-top:10px">' + prettyD(cur) + ' is over, so this is a record now — grades, times and notes are fixed. Today is still fully editable, even hours that have already passed.</div>' +
+    '<div class="modrow"><div class="spacer"></div><button class="btn gold" data-x>CLOSE</button></div>'
+  );
+  $('#modal').querySelectorAll('[data-x]').forEach(x => x.onclick = closeModal);
+}
+
+/* An event block seen from DAILY. Every event is always a block now — no more
+   "pull" step — so this is purely read-only: rename/retime/repeat happen in
+   CALENDAR, the only thing DAILY can do is cancel it. */
+function openTodayEvent(b) {
+  const base = S.events.find(e => e.id === b.evId);
+  const timeTxt = slotLabel(b.start) + ' – ' + slotLabel(b.start + b.len);
   openModal(
     '<h3>EVENT<button class="btn sm x" data-x>✕</button></h3>' +
-    '<div class="field"><label>EVENT</label><input class="inp ro" value="' + esc(title) + '" readonly></div>' +
-    '<div class="field"><label>NOTE</label><textarea class="inp ro" readonly>' + esc(note) + '</textarea></div>' +
+    '<div class="field"><label>EVENT</label><input class="inp ro" value="' + esc(b.evTitle || 'Event') + '" readonly></div>' +
+    '<div class="field"><label>NOTE</label><textarea class="inp ro" readonly>' + esc(b.note || '') + '</textarea></div>' +
     '<div class="hint" style="margin-bottom:6px">' + timeTxt + ' · ' + prettyD(cur) +
-    '<br>Events are owned by the calendar — rename, retime or change the repeat over there.</div>' +
+    '<br>Events are owned by CALENDAR — rename, retime or change the repeat over there.</div>' +
     '<div class="modrow"><button class="btn red" data-cancel>CANCEL</button>' +
-    '<div class="spacer"></div>' +
-    (isBlk ? '<button class="btn" data-x>CLOSE</button>' : '<button class="btn green" data-pull>PULL</button>') +
-    '</div>'
+    '<div class="spacer"></div><button class="btn" data-x>CLOSE</button></div>'
   );
   const M = $('#modal');
   M.querySelectorAll('[data-x]').forEach(x => x.onclick = closeModal);
-  const pl = M.querySelector('[data-pull]');
-  if (pl) pl.onclick = () => {
-    pushUndo();
-    addEventBlock(cur, evOrBlock);
-    save(); closeModal(); renderAll(); sfx('place'); toast('Pulled into the day');
-  };
   M.querySelector('[data-cancel]').onclick = () => {
+    if (isPastDay(cur)) { toast('Past days are archived'); return; }
     pushUndo();
-    const d = getDay(cur);
-    d.blocks = d.blocks.filter(x => x.evId !== evId);      // drop the pulled block, if any
     if (base) {
       if (isRepeating(base)) base.skip = (base.skip || []).concat([cur]);
-      else S.events = S.events.filter(e => e.id !== evId);
+      else S.events = S.events.filter(e => e.id !== b.evId);
     }
+    syncAllEventBlocks();
     save(); closeModal(); renderAll(); sfx('back');
     toast(base && isRepeating(base) ? 'Cancelled just today' : 'Event cancelled');
   };
@@ -454,7 +485,8 @@ function openTodayEvent(evOrBlock, pulled) {
 /* ---------------- grading ---------------- */
 function openGrade(id) {
   const b = findBlock(cur, id); if (!b) return;
-  if (isEvent(b)) { openTodayEvent(b, true); return; }
+  if (isEvent(b)) { openTodayEvent(b); return; }
+  if (isPastDay(cur)) { openArchivedBlock(b); return; }
   if (b.done) { openBlockEditor(id); return; }
   openModal(
     '<h3>HOW DID IT GO?<button class="btn sm x" data-x>✕</button></h3>' +
