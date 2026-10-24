@@ -21,14 +21,23 @@
    - On focus, every 45s while visible, and on reconnect, we pull and merge
    =================================================================== */
 const CLOUD_CFG = 'baron.cloud', CLOUD_AUTH = 'baron.auth', CLOUD_META = 'baron.sync', CLOUD_DEV = 'baron.device';
-/* where a device link points when this copy is opened from file:// */
+/* the online copy: where Google sign-in and device links go when this file is opened from disk */
 const PUBLIC_URL = 'https://kvyta.github.io/baron/baron.html';
+/* Baron's built-in cloud. It is private: the database refuses every account
+   except OWNER, so anyone else who signs in is asked to connect their own
+   Supabase project instead (supabase/schema.sql). The key is a publishable
+   key — safe in public, row-level security does the guarding. */
+const DEFAULT_CLOUD = {
+  url: 'https://hrngqseuscutashgprsq.supabase.co',
+  key: 'sb_publishable_I4n19E25dNudYHsakwFmbw_AasTkviS',
+  owner: '2011kevintan@gmail.com'
+};
 
 const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } };
 const lsSet = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
 
 const cloud = {
-  cfg: lsGet(CLOUD_CFG, null),      // {url, key}
+  cfg: lsGet(CLOUD_CFG, null) || DEFAULT_CLOUD,   // {url, key}; only a custom project is stored
   auth: lsGet(CLOUD_AUTH, null),    // {access_token, refresh_token, expires_at, user:{id,email}}
   meta: lsGet(CLOUD_META, null),    // {uid, rev, base, dirty, last}
   status: 'off',                    // off | idle | syncing | offline | error
@@ -36,6 +45,7 @@ const cloud = {
 };
 function freshMeta() { return { uid: cloud.auth && cloud.auth.user ? cloud.auth.user.id : null, rev: 0, base: null, dirty: true, last: 0 }; }
 if (!cloud.meta || (cloud.auth && cloud.meta.uid !== cloud.auth.user.id)) cloud.meta = freshMeta();
+const isDefaultCloud = () => !!cloud.cfg && cloud.cfg.url === DEFAULT_CLOUD.url;
 const cloudOn = () => !!(cloud.cfg && cloud.cfg.url && cloud.cfg.key && cloud.auth && cloud.auth.access_token);
 const saveMeta = () => lsSet(CLOUD_META, cloud.meta);
 
@@ -309,20 +319,25 @@ async function cloudSync(reason) {
   if (cloud.again) { cloud.again = false; setTimeout(() => cloudSync('again'), 60); }
 }
 
-/* ---------- device link: carries the project URL + public key, never a password ---------- */
+/* ---------- device link: Baron's own cloud needs nothing but the page;
+   a custom project rides along as #cloud=<url+publishable key>, never a password ---------- */
 const b64u = s => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64u = s => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/'))));
+const onlineHere = () => /^https?:/.test(location.protocol);
 function deviceLink() {
-  const here = /^https?:/.test(location.protocol) ? location.origin + location.pathname : PUBLIC_URL;
-  return here + '#cloud=' + b64u(JSON.stringify({ u: cloud.cfg.url, k: cloud.cfg.key }));
+  const here = onlineHere() ? location.origin + location.pathname : PUBLIC_URL;
+  return isDefaultCloud() ? here : here + '#cloud=' + b64u(JSON.stringify({ u: cloud.cfg.url, k: cloud.cfg.key }));
+}
+function setCustomCloud(u, k) {
+  if (!cloud.cfg || cloud.cfg.url !== u) { cloud.auth = null; lsSet(CLOUD_AUTH, null); cloud.meta = freshMeta(); saveMeta(); }
+  cloud.cfg = { url: u, key: k };
+  lsSet(CLOUD_CFG, u === DEFAULT_CLOUD.url ? null : cloud.cfg);
+  if (u === DEFAULT_CLOUD.url) cloud.cfg = DEFAULT_CLOUD;
 }
 function readCloudHash() {
   const m = /[#&]cloud=([^&]+)/.exec(location.hash || '');
   if (!m) return false;
-  try {
-    const o = JSON.parse(unb64u(m[1]));
-    if (o.u && o.k) { cloud.cfg = { url: o.u, key: o.k }; lsSet(CLOUD_CFG, cloud.cfg); }
-  } catch (e) { console.warn('bad cloud link'); }
+  try { const o = JSON.parse(unb64u(m[1])); if (o.u && o.k) setCustomCloud(o.u, o.k); } catch (e) { console.warn('bad cloud link'); }
   try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
   return true;
 }
@@ -334,68 +349,117 @@ function qrSvg(text) {
   return '<svg viewBox="0 0 ' + (n + 2 * m) + ' ' + (n + 2 * m) + '" shape-rendering="crispEdges" style="width:100%;height:auto;display:block;background:#fff;border-radius:8px"><path d="' + p + '" fill="#0a0d10"/></svg>';
 }
 
+/* ---------- Google sign-in (Supabase OAuth, redirect flow) ----------
+   Leaves the page for Google and comes back with the session in the URL
+   fragment. A file opened from disk can't be returned to, so there it sends
+   you to the online copy instead. */
+function startGoogle() {
+  if (!onlineHere()) { openOnlineOnly(); return; }
+  try { sessionStorage.setItem('baron.oauth', JSON.stringify(cloud.cfg)); } catch (e) {}
+  location.href = sbUrl('/auth/v1/authorize?provider=google&redirect_to=' + encodeURIComponent(location.origin + location.pathname));
+}
+async function readOAuthReturn() {
+  const h = new URLSearchParams((location.hash || '').replace(/^#/, '')), q = new URLSearchParams(location.search);
+  const at = h.get('access_token');
+  const err = h.get('error_description') || q.get('error_description') || h.get('error') || q.get('error');
+  if (!at && !err) return null;
+  try { history.replaceState(null, '', location.pathname); } catch (e) {}
+  try { const sv = JSON.parse(sessionStorage.getItem('baron.oauth') || 'null'); sessionStorage.removeItem('baron.oauth'); if (sv && sv.url) cloud.cfg = sv.url === DEFAULT_CLOUD.url ? DEFAULT_CLOUD : sv; } catch (e) {}
+  if (err) return { err: String(err).replace(/\+/g, ' ') };
+  const r = await fetch(sbUrl('/auth/v1/user'), { headers: { apikey: cloud.cfg.key, Authorization: 'Bearer ' + at } });
+  const user = await sbJson(r);
+  keepSession({ access_token: at, refresh_token: h.get('refresh_token'), expires_at: +h.get('expires_at') || 0, expires_in: +h.get('expires_in') || 3600, user: user });
+  return { ok: true };
+}
+function signedInOK() {
+  closeModal(); setCloudStatus('syncing');
+  cloudSync('signin').then(() => { toast(cloud.status === 'idle' ? 'Synced as ' + cloud.auth.user.email : 'Signed in — sync: ' + (cloud.err || cloud.status)); renderAll(); });
+}
+
 /* ---------- UI ---------- */
-function cloudMenuHtml() {
-  if (!cloud.cfg) return '<div class="hint">Off. Connect your Supabase project to edit this planner from your phone too.</div>' +
-    '<div class="modrow" style="margin-top:9px"><button class="btn sm green" data-cloud="setup">SET UP CLOUD SYNC</button></div>';
-  if (!cloudOn()) return '<div class="hint">Project connected, not signed in.</div>' +
-    '<div class="modrow" style="margin-top:9px"><button class="btn sm green" data-cloud="signin">SIGN IN</button><button class="btn sm" data-cloud="setup">CHANGE PROJECT</button></div>';
-  const st = cloud.status === 'idle' ? '● synced' + (cloud.meta.last ? ' at ' + new Date(cloud.meta.last).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '')
-    : cloud.status === 'syncing' ? '● syncing…' : cloud.status === 'offline' ? '● offline — will sync on reconnect' : cloud.status === 'error' ? '● ' + esc(cloud.err) : '● waiting';
-  return '<div class="li"><span>' + esc(cloud.auth.user.email) + '</span><span style="margin-left:auto;font-size:11px;opacity:.75">' + st + '</span></div>' +
-    '<div class="modrow" style="margin-top:9px"><button class="btn sm blue" data-cloud="now">SYNC NOW</button>' +
-    '<button class="btn sm gold" data-cloud="link">LINK A DEVICE</button><div class="spacer"></div>' +
-    '<button class="btn sm red" data-cloud="out">SIGN OUT</button></div>';
+const googleBtn = (cls) => '<button class="btn ' + (cls || '') + ' gbtn" data-cloud="google"><b>G</b> SIGN IN WITH GOOGLE</button>';
+/* one compact row in ☰ Menu → SAVING (see openMenu in 05-views.js) */
+function cloudRowHtml() {
+  const row = (st, btns, title) => '<div class="svrow" title="' + esc(title) + '"><span class="svk">CLOUD</span><span class="svs">' + st + '</span><span class="svb">' + btns + '</span></div>';
+  const tip = 'Cloud sync keeps your phone and computer on the same planner.';
+  if (!cloudOn()) return isDefaultCloud()
+    ? row('Not signed in', googleBtn('sm green') + '<button class="btn sm" data-cloud="setup">OWN PROJECT</button>', tip)
+    : row('Your project · not signed in', '<button class="btn sm green" data-cloud="signin">SIGN IN</button><button class="btn sm" data-cloud="setup">PROJECT</button>', tip);
+  const when = cloud.meta.last ? ' ' + new Date(cloud.meta.last).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+  const st = cloud.status === 'idle' ? '<i class="ok">●</i> synced' + when
+    : cloud.status === 'syncing' ? '<i class="wait">●</i> syncing…' : cloud.status === 'offline' ? '<i>●</i> offline' : cloud.status === 'error' ? '<i class="bad">●</i> ' + esc(cloud.err) : '<i>●</i> waiting';
+  return row(st + ' · ' + esc(cloud.auth.user.email),
+    '<button class="btn sm blue" data-cloud="now">SYNC</button><button class="btn sm gold" data-cloud="link">LINK PHONE</button><button class="btn sm red" data-cloud="out">SIGN OUT</button>',
+    tip + ' Signed in as ' + cloud.auth.user.email + '.');
 }
 function bindCloudMenu(M) {
   M.querySelectorAll('[data-cloud]').forEach(b => b.onclick = () => {
     const a = b.dataset.cloud;
-    if (a === 'setup') openCloudSetup();
+    if (a === 'google') startGoogle();
+    else if (a === 'setup') openCloudSetup();
     else if (a === 'signin') openCloudSignIn();
     else if (a === 'now') { closeModal(); cloudSync('manual').then(() => toast(cloud.status === 'idle' ? 'Synced' : 'Sync: ' + (cloud.err || cloud.status))); }
     else if (a === 'link') openDeviceLink();
     else if (a === 'out') { cloudSignOut(); closeModal(); toast('Signed out — this device keeps its copy'); }
   });
 }
-function openCloudSetup() {
+/* someone other than the owner tried Baron's built-in cloud */
+function openNotOwner(email) {
+  openCloudSetup('<b>' + (email ? esc(email) + ' can’t' : 'That account can’t') + ' use Baron’s built-in cloud</b> — it’s private to its owner. ' +
+    'To sync your own planner between devices, connect your own free Supabase project (it takes a few minutes).');
+}
+function openOnlineOnly() {
   openModal(
-    '<h3>CLOUD SYNC<button class="btn sm x" data-x>✕</button></h3>' +
-    '<div class="hint" style="margin-bottom:10px">Paste your Supabase project URL and its <b>publishable</b> (or anon) key — both are safe to share, row-level security keeps each account to its own data. ' +
-    'New project? Run <b>supabase/schema.sql</b> from the repo in its SQL editor first.</div>' +
-    '<div class="field"><label>PROJECT URL</label><input class="inp" id="cfU" data-autofocus placeholder="https://xxxx.supabase.co" value="' + esc(cloud.cfg ? cloud.cfg.url : '') + '"></div>' +
-    '<div class="field"><label>PUBLISHABLE KEY</label><input class="inp" id="cfK" placeholder="sb_publishable_…" value="' + esc(cloud.cfg ? cloud.cfg.key : '') + '"></div>' +
-    '<div class="modrow">' + (cloud.cfg ? '<button class="btn sm red" data-forget>DISCONNECT</button>' : '') + '<div class="spacer"></div><button class="btn green" data-ok>NEXT</button></div>'
+    '<h3>SIGN IN ONLINE<button class="btn sm x" data-x>✕</button></h3>' +
+    '<div class="hint" style="font-size:13px;margin-bottom:12px">Google can’t send you back to a file opened from your disk. Open Baron online and sign in there — everything else, saving to a file included, works the same. ' +
+    'In Chrome or Edge you can then install it as an app from the address bar.</div>' +
+    '<div class="modrow"><a class="btn gold" href="' + PUBLIC_URL + '" target="_blank" rel="noopener" style="text-decoration:none">OPEN BARON ONLINE</a><div class="spacer"></div><button class="btn" data-x>CLOSE</button></div>'
+  );
+  $('#modal').querySelectorAll('[data-x]').forEach(b => b.onclick = closeModal);
+}
+function openCloudSetup(intro) {
+  const custom = cloud.cfg && !isDefaultCloud() ? cloud.cfg : null;
+  openModal(
+    '<h3>YOUR OWN CLOUD<button class="btn sm x" data-x>✕</button></h3>' +
+    (intro ? '<div class="hint" style="font-size:13px;margin-bottom:10px">' + intro + '</div>' : '') +
+    '<div class="hint" style="margin-bottom:10px">1. Create a free project at supabase.com. 2. In its SQL editor, run <b>supabase/schema.sql</b> from Baron’s repository. 3. Paste the project URL and its <b>publishable</b> key (Project Settings → API keys) here.</div>' +
+    '<div class="field"><label>PROJECT URL</label><input class="inp" id="cfU" data-autofocus placeholder="https://xxxx.supabase.co" value="' + esc(custom ? custom.url : '') + '"></div>' +
+    '<div class="field"><label>PUBLISHABLE KEY</label><input class="inp" id="cfK" placeholder="sb_publishable_…" value="' + esc(custom ? custom.key : '') + '"></div>' +
+    '<div class="modrow">' + (custom ? '<button class="btn sm red" data-forget>DISCONNECT</button>' : '') + '<div class="spacer"></div><button class="btn green" data-ok>NEXT</button></div>'
   );
   const M = $('#modal');
   M.querySelector('[data-x]').onclick = closeModal;
   const fg = M.querySelector('[data-forget]');
-  if (fg) fg.onclick = () => { cloudSignOut(); cloud.cfg = null; lsSet(CLOUD_CFG, null); closeModal(); toast('Cloud sync disconnected'); };
+  if (fg) fg.onclick = () => { cloudSignOut(); setCustomCloud(DEFAULT_CLOUD.url, DEFAULT_CLOUD.key); closeModal(); toast('Your project is disconnected'); };
   M.querySelector('[data-ok]').onclick = () => {
-    const u = M.querySelector('#cfU').value.trim(), k = M.querySelector('#cfK').value.trim();
+    const u = M.querySelector('#cfU').value.trim().replace(/\/+$/, ''), k = M.querySelector('#cfK').value.trim();
     if (!/^https:\/\/.+/.test(u) || k.length < 20) { toast('Need the https:// URL and the key'); return; }
-    if (!cloud.cfg || cloud.cfg.url !== u) { cloud.auth = null; lsSet(CLOUD_AUTH, null); }
-    cloud.cfg = { url: u, key: k }; lsSet(CLOUD_CFG, cloud.cfg);
+    if (u === DEFAULT_CLOUD.url) { toast('That’s Baron’s built-in cloud — use your own project'); return; }
+    setCustomCloud(u, k);
     openCloudSignIn();
   };
 }
+/* sign-in for a custom project: Google if that project turned it on, or email + password */
 function openCloudSignIn(first) {
   openModal(
     '<h3>' + (first ? 'LINK THIS DEVICE' : 'SIGN IN') + '<button class="btn sm x" data-x>✕</button></h3>' +
     (first ? '<div class="hint" style="margin-bottom:10px">This link connected Baron to your cloud project. Sign in and this device picks up your planner.</div>' : '') +
-    '<div class="field"><label>EMAIL</label><input class="inp" id="cfE" type="email" autocomplete="username" data-autofocus></div>' +
+    '<div class="modrow" style="margin:0 0 12px">' + googleBtn('blue') + '</div>' +
+    '<div class="hint" style="margin-bottom:8px">Google works if your project has the Google provider turned on. Otherwise use an email and password:</div>' +
+    '<div class="field"><label>EMAIL</label><input class="inp" id="cfE" type="email" autocomplete="username"></div>' +
     '<div class="field"><label>PASSWORD</label><input class="inp" id="cfP" type="password" autocomplete="current-password"></div>' +
     '<div class="hint" id="cfMsg" style="min-height:16px"></div>' +
     '<div class="modrow"><button class="btn sm" data-up>CREATE ACCOUNT</button><div class="spacer"></div><button class="btn green" data-in>SIGN IN</button></div>'
   );
   const M = $('#modal'), msg = M.querySelector('#cfMsg');
   M.querySelector('[data-x]').onclick = closeModal;
+  M.querySelector('[data-cloud="google"]').onclick = startGoogle;
   const vals = () => [M.querySelector('#cfE').value.trim(), M.querySelector('#cfP').value];
   const busy = on => M.querySelectorAll('button').forEach(b => b.disabled = on);
-  const after = () => { closeModal(); setCloudStatus('syncing'); cloudSync('signin').then(() => { toast(cloud.status === 'idle' ? 'Cloud sync on' : 'Signed in — sync: ' + (cloud.err || cloud.status)); renderAll(); }); };
   M.querySelector('[data-in]').onclick = async () => {
     const [e, p] = vals(); if (!e || !p) { msg.textContent = 'Email and password, please.'; return; }
     busy(true); msg.textContent = 'Signing in…';
-    try { await cloudSignIn(e, p); after(); }
+    try { await cloudSignIn(e, p); signedInOK(); }
     catch (err) { busy(false); msg.textContent = /confirm/i.test(err.message) ? 'Confirm your email first (check your inbox), then sign in.' : err.message; }
   };
   M.querySelector('[data-up]').onclick = async () => {
@@ -403,7 +467,7 @@ function openCloudSignIn(first) {
     busy(true); msg.textContent = 'Creating account…';
     try {
       const res = await cloudSignUp(e, p);
-      if (res === 'in') after();
+      if (res === 'in') signedInOK();
       else { busy(false); msg.innerHTML = 'Account created. <b>Check your email</b> and click the confirmation link, then come back and SIGN IN.'; }
     } catch (err) { busy(false); msg.textContent = err.message; }
   };
@@ -412,9 +476,9 @@ function openCloudSignIn(first) {
 function openDeviceLink() {
   const link = deviceLink();
   openModal(
-    '<h3>LINK A DEVICE<button class="btn sm x" data-x>✕</button></h3>' +
+    '<h3>LINK YOUR PHONE<button class="btn sm x" data-x>✕</button></h3>' +
     '<div style="max-width:240px;margin:0 auto 12px">' + qrSvg(link) + '</div>' +
-    '<div class="hint" style="margin-bottom:10px">Scan this with your phone’s camera (or send yourself the link). It opens Baron already pointed at your cloud project — just sign in. ' +
+    '<div class="hint" style="margin-bottom:10px">Scan this with your phone’s camera (or send yourself the link), open ☰ and sign in' + (isDefaultCloud() ? ' with Google' : '') + '. ' +
     'Then use your browser’s <b>Add to Home Screen</b> and Baron runs like an app.</div>' +
     '<input class="inp ro" id="dlUrl" readonly value="' + esc(link) + '">' +
     '<div class="modrow"><button class="btn sm" data-copy>COPY LINK</button>' + (navigator.share ? '<button class="btn sm blue" data-share>SHARE…</button>' : '') +
@@ -430,11 +494,24 @@ function openDeviceLink() {
   if (sh) sh.onclick = () => navigator.share({ title: 'Baron', url: link }).catch(() => {});
 }
 
-function startCloud() {
+async function startCloud() {
   const linked = readCloudHash();
+  let back = null;
+  try { back = await readOAuthReturn(); } catch (e) { back = { err: e.message }; }
+  if (back && back.err) {
+    /* the owner-only lock surfaces as a failed account creation */
+    if (isDefaultCloud() && /database|private|saving new user/i.test(back.err)) setTimeout(() => openNotOwner(), 300);
+    else toast('Sign-in failed: ' + back.err);
+  } else if (back && back.ok && isDefaultCloud() && String(cloud.auth.user.email || '').toLowerCase() !== DEFAULT_CLOUD.owner) {
+    const em = cloud.auth.user.email;
+    await cloudSignOut();
+    setTimeout(() => openNotOwner(em), 300);
+  } else if (back && back.ok) {
+    toast('Signed in as ' + cloud.auth.user.email);
+  }
   setCloudStatus(cloudOn() ? 'idle' : 'off');
-  if (linked && cloud.cfg && !cloudOn()) setTimeout(() => openCloudSignIn(true), 400);
-  if (cloudOn()) cloudSync('boot');
+  if (linked && !isDefaultCloud() && !cloudOn()) setTimeout(() => openCloudSignIn(true), 400);
+  if (cloudOn()) cloudSync('boot').then(() => { if (back && back.ok) renderAll(); });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Date.now() - cloud.lastPull > 5000) cloudSync('focus'); });
   window.addEventListener('online', () => cloudSync('online'));
   window.addEventListener('offline', () => setCloudStatus(cloudOn() ? 'offline' : 'off'));

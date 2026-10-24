@@ -94,27 +94,34 @@ start baron.html      # Windows   (open baron.html on macOS)
 
 ## On your phone
 
-1. Set up cloud sync (below) on your computer and sign in.
-2. `☰ Menu → CLOUD SYNC → LINK A DEVICE` shows a QR code. Scan it with your
-   phone — Baron opens already pointed at your project. Sign in.
-3. In your phone browser, **Add to Home Screen**. Baron opens full-screen,
-   works offline, and syncs when it's back online.
+Open [kvyta.github.io/baron](https://kvyta.github.io/baron) on your phone,
+open ☰ and sign in, then use your browser's **Add to Home Screen** — Baron
+opens full-screen, works offline, and syncs when it's back online.
+`☰ Menu → LINK PHONE` on your computer shows a QR code for the same link.
 
 On a phone the score sits in a bar at the top (tap it for the full rail), tabs
 scroll sideways, and tapping empty time adds a one-hour block.
 
 ## Cloud sync
 
+Baron's built-in cloud (☰ → SIGN IN WITH GOOGLE) is private to the repo's
+owner. Anyone else who signs in is asked to connect their own project, which
+takes a few minutes:
+
 1. Create a free project at [supabase.com](https://supabase.com).
 2. In its SQL editor, run [`supabase/schema.sql`](supabase/schema.sql).
-3. In Baron: `☰ Menu → CLOUD SYNC`, paste the project URL and the
-   **publishable** key (Project Settings → API keys), then create an account.
+3. In Baron: `☰ Menu → OWN PROJECT`, paste the project URL and the
+   **publishable** key (Project Settings → API keys), then sign in with an
+   email and password (or Google, if you turn that provider on).
 
 Every change syncs about a second later; other devices pick it up when you
 switch back to them, or within 45 seconds. If two devices edited at once, the
 changes are merged item by item — the device in your hand wins a true tie, and
 a delete never beats an edit. Row-level security locks each account to its own
-row, which is why the publishable key is safe to put in a link.
+row, which is why a publishable key is safe in public.
+
+Google sign-in needs the online copy: a file opened from your disk can't be
+returned to after Google, so Baron sends you to the online copy instead.
 
 ## Where your data lives
 
