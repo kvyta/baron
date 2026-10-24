@@ -21,3 +21,6 @@ $RECYCLE.BIN/
 # ─── scratch ─────────────────────────────────────────────────────
 _to_delete/
 node_modules/
+
+# ─── AI context file (local only) ────────────────────────────────
+CONTEXT.md

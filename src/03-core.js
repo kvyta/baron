@@ -183,6 +183,7 @@ function snapshot() { return JSON.stringify({ v: 4, tasks: S.tasks, days: S.days
 function save() {
   try { localStorage.setItem(LS_KEY, snapshot()); } catch (e) { /* private mode */ }
   queueFileSave();
+  if (typeof cloudQueue === 'function') cloudQueue();   // 06-sync.js — no-op unless signed in
 }
 function loadLocal() {
   try {
@@ -501,12 +502,14 @@ function syncEventsOn(ds) {
        moved out from under it. `matches.length !== 1` also mops up any
        leftover duplicate event-blocks from earlier bugs. */
     const matches = day.blocks.filter(b => b.evId === ev.id);
-    const stale = matches.length !== 1 || matches[0].start !== start || matches[0].len !== (end - start) ||
+    const stale = matches.length !== 1 || matches[0].id !== 'ev_' + ev.id + '_' + ds || matches[0].start !== start || matches[0].len !== (end - start) ||
       matches[0].evTitle !== ev.title || matches[0].note !== evNote;
     if (!stale) return;
     if (matches.length) day.blocks = day.blocks.filter(b => b.evId !== ev.id);
     carve(day, start, end, true);
-    day.blocks.push({ id: uid(), start: start, len: end - start, evId: ev.id, evTitle: ev.title, note: evNote, done: false, grade: null });
+    /* deterministic id: two synced devices materializing the same occurrence
+       must produce the same block, or a merge would double it */
+    day.blocks.push({ id: 'ev_' + ev.id + '_' + ds, start: start, len: end - start, evId: ev.id, evTitle: ev.title, note: evNote, done: false, grade: null });
     changed = true;
   });
   const before = day.blocks.length;

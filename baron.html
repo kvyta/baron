@@ -2,7 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#08201d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Baron">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <title>Baron</title>
 <style>
 /* ===================== fonts =====================
@@ -529,14 +537,111 @@ textarea.inp{resize:vertical;min-height:56px;font-weight:500}
   .gcard .g{font-size:26px}
 }
 
+/* ============ cloud sync dot ============ */
+.logo{position:relative}
+.clouddot{position:absolute;top:7px;right:8px;width:11px;height:11px;border-radius:50%;border:2px solid var(--ink);background:#6b7780}
+.clouddot[hidden]{display:none}
+.clouddot[data-s="idle"]{background:var(--green)}
+.clouddot[data-s="syncing"]{background:var(--gold);animation:cdpulse 1s ease-in-out infinite}
+.clouddot[data-s="offline"]{background:#8fa0a8}
+.clouddot[data-s="error"]{background:var(--mult)}
+@keyframes cdpulse{50%{opacity:.35}}
+
+/* ============ phone bar + drawer (hidden on bigger screens) ============ */
+.mbar,.railshade{display:none}
+
+@media (max-width:700px){
+  body{overflow:hidden;font-size:14px}
+  #app{flex-direction:column;height:100vh;height:100dvh;min-height:0;padding:8px 8px calc(8px + env(safe-area-inset-bottom));gap:8px}
+  .mbar{display:flex;align-items:center;gap:6px;flex:0 0 auto;background:var(--panel);border:3px solid var(--ink);border-radius:12px;padding:5px 6px;box-shadow:0 4px 0 rgba(0,0,0,.45);position:relative;cursor:pointer;margin-top:env(safe-area-inset-top)}
+  .mlogo{font-family:var(--f-disp);font-size:20px;width:34px;height:34px;display:grid;place-items:center;background:linear-gradient(#e33c33,#b8241d);border:2px solid var(--ink);border-radius:9px;flex:0 0 auto}
+  .mst{flex:1;min-width:0;text-align:center;line-height:1.05}
+  .mst span{display:block;font-size:8px;font-weight:900;letter-spacing:1.3px;opacity:.6}
+  .mst b{font-family:var(--f-disp);font-weight:400;font-size:19px}
+  .mbar .clouddot{position:static;flex:0 0 auto}
+  .mbar .btn.icon{width:34px;height:32px}
+  /* the rail becomes a drawer */
+  .rail{position:fixed;left:0;top:0;bottom:0;z-index:55;width:min(300px,86vw);flex:none;padding:12px 10px calc(12px + env(safe-area-inset-bottom));
+    background:var(--bg0);border-right:3px solid var(--ink);box-shadow:6px 0 24px rgba(0,0,0,.6);transform:translateX(-105%);transition:transform .2s ease;overflow-y:auto}
+  body.railopen .rail{transform:none}
+  body.railopen .railshade{display:block;position:fixed;inset:0;z-index:54;background:rgba(3,10,9,.6)}
+  .railbtns{grid-template-columns:1fr}
+  /* tabs scroll sideways rather than wrap */
+  .tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:5px;margin-bottom:-5px;gap:5px}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{font-size:14px;padding:6px 10px 7px;flex:0 0 auto}
+  .tabs .spacer{display:none}
+  #btnHelp,#btnSound,#btnMenu{display:none}
+  .main{gap:7px;min-height:0;flex:1}
+  .view{gap:7px}
+  .toolbar{gap:5px}
+  .toolbar .datenav{flex:1 1 100%;width:auto!important}
+  .btn.sm{font-size:12.5px;padding:5px 8px 6px}
+  .gridwrap,.listwrap,.tkwrap{height:auto;flex:1;min-height:0}
+  .gridwrap{padding:6px 6px 18px}
+  .grid{grid-template-columns:44px 1fr}
+  .nowline,.edge{left:44px}
+  .nowline b{left:-44px;font-size:10px}
+  .edge b{left:-44px;font-size:10px}
+  .tl{font-size:11px;padding-right:6px}
+  .cell:hover{background:none;box-shadow:none}
+  .cell:hover::after{content:none}
+  .blk:hover{transform:none;box-shadow:0 3px 0 rgba(0,0,0,.5)}
+  .rz{height:16px}
+  .daybody{flex-direction:column}
+  .dayinfo{display:none}
+  .listwrap{padding:9px}
+  /* calendar: compact cells */
+  .calwrap{padding:6px}
+  .calgrid,.dow{gap:3px}
+  .day{min-height:62px;padding:3px 3px 6px;border-width:2px;border-radius:7px;gap:2px}
+  .day:hover{transform:none}
+  .day .n{font-size:13px}
+  .day .n em{font-size:9px}
+  .day .ev{font-size:8px;padding:0 2px;border-width:1px}
+  .day .more{font-size:8px}
+  .dow div{font-size:8px;letter-spacing:1px}
+  /* tasks */
+  .tkrow{flex-wrap:wrap;gap:6px;padding:7px 8px 7px 14px}
+  .tkrow .nmtxt{flex:1 1 100%;padding:2px 4px}
+  .tkrow .cnt{display:none}
+  .tkrow .hrs{margin-right:auto;text-align:left;min-width:0}
+  .tkadd{flex-wrap:wrap}
+  .tkadd .btn{flex:1 1 auto}
+  /* modals: full width, 16px inputs so iOS doesn't zoom */
+  .scrim{padding:8px;place-items:end center}
+  .modal{max-height:92dvh;padding:13px;border-radius:14px}
+  .modal h3{font-size:21px}
+  .inp,select.inp,textarea.inp{font-size:16px}
+  .grades{grid-template-columns:repeat(5,1fr);gap:5px}
+  .gcard{padding:9px 2px 7px}
+  .gcard .g{font-size:28px}
+  .gcard .l{font-size:8.5px}
+  .gcard:hover{transform:none}
+  .toast{bottom:calc(16px + env(safe-area-inset-bottom));max-width:92vw;text-align:center;font-size:14px}
+  .alert{left:8px;right:8px;width:auto}
+}
+
 </style>
 </head>
 <body>
 <div id="bg"></div>
 <div id="app">
 
+  <!-- phone only: headline numbers; tap to open the rail as a drawer -->
+  <div class="mbar" id="mbar">
+    <div class="mlogo outline">B</div>
+    <div class="mst"><span>SCORE</span><b id="mScore" style="color:var(--chip)">0</b></div>
+    <div class="mst"><span>RANK</span><b id="mRank" style="color:var(--mult)">0</b></div>
+    <div class="mst"><span>GOLD</span><b id="mGold" class="goldtxt">0</b></div>
+    <div class="mst"><span>STREAK</span><b id="mStreak" style="color:var(--orange)">0</b></div>
+    <i class="clouddot" data-s="off" hidden></i>
+    <button class="btn icon" id="mMenu" title="Menu">☰</button>
+  </div>
+  <div class="railshade" id="railShade"></div>
+
   <aside class="rail">
-    <div class="logo outline">BARON</div>
+    <div class="logo outline">BARON<i class="clouddot" id="cloudDot" data-s="off" hidden></i></div>
 
     <div class="panel" style="padding:9px">
       <div class="scorebox">
@@ -899,6 +1004,7 @@ function snapshot() { return JSON.stringify({ v: 4, tasks: S.tasks, days: S.days
 function save() {
   try { localStorage.setItem(LS_KEY, snapshot()); } catch (e) { /* private mode */ }
   queueFileSave();
+  if (typeof cloudQueue === 'function') cloudQueue();   // 06-sync.js — no-op unless signed in
 }
 function loadLocal() {
   try {
@@ -1217,12 +1323,14 @@ function syncEventsOn(ds) {
        moved out from under it. `matches.length !== 1` also mops up any
        leftover duplicate event-blocks from earlier bugs. */
     const matches = day.blocks.filter(b => b.evId === ev.id);
-    const stale = matches.length !== 1 || matches[0].start !== start || matches[0].len !== (end - start) ||
+    const stale = matches.length !== 1 || matches[0].id !== 'ev_' + ev.id + '_' + ds || matches[0].start !== start || matches[0].len !== (end - start) ||
       matches[0].evTitle !== ev.title || matches[0].note !== evNote;
     if (!stale) return;
     if (matches.length) day.blocks = day.blocks.filter(b => b.evId !== ev.id);
     carve(day, start, end, true);
-    day.blocks.push({ id: uid(), start: start, len: end - start, evId: ev.id, evTitle: ev.title, note: evNote, done: false, grade: null });
+    /* deterministic id: two synced devices materializing the same occurrence
+       must produce the same block, or a merge would double it */
+    day.blocks.push({ id: 'ev_' + ev.id + '_' + ds, start: start, len: end - start, evId: ev.id, evTitle: ev.title, note: evNote, done: false, grade: null });
     changed = true;
   });
   const before = day.blocks.length;
@@ -1454,6 +1562,9 @@ function renderRail() {
   $('#stGold').textContent = dayGold(d).toLocaleString();
   $('#stGold').parentNode.title = 'score ' + sc + ' × rank ' + rk.toFixed(1);
   $('#stStreak').textContent = computeStreak();
+  /* phone bar mirrors the rail's headline numbers */
+  $('#mScore').textContent = sc; $('#mRank').textContent = rk ? rk.toFixed(1) : '0';
+  $('#mGold').textContent = dayGold(d).toLocaleString(); $('#mStreak').textContent = computeStreak();
   const bd = bestDay();
   $('#stBest').textContent = bd.gold ? bd.gold.toLocaleString() : '0';
   $('#stBest').parentNode.title = bd.date ? 'best gold: ' + bd.gold + ' on ' + prettyD(bd.date) : 'best gold so far';
@@ -1502,6 +1613,7 @@ function renderDateNav() {
 function fitNavBar(el, tab, view) {
   if (!el || !tab || !view || view.hidden) return;
   el.style.width = '';
+  if (isPhone()) return;   // phone layout: the bar just takes the whole row
   const w = Math.round(tab.getBoundingClientRect().right - el.getBoundingClientRect().left);
   if (w > 140) el.style.width = w + 'px';
 }
@@ -1509,6 +1621,7 @@ function fitDateNav() { fitNavBar($('#viewDay .datenav'), $('.tab[data-view="wee
 function fitQuotaNav() { fitNavBar($('#quotaNav'), $('.tab[data-view="tasks"]'), $('#viewWeek')); }
 function fitMonthNav() { fitNavBar($('#monthNav'), $('.tab[data-view="tasks"]'), $('#viewCal')); }
 function fitAllNavBars() { fitDateNav(); fitQuotaNav(); fitMonthNav(); }
+const isPhone = () => window.matchMedia('(max-width:700px)').matches;
 
 /* ---------------- THE DAY ----------------
    Rows are no longer a uniform height: everything outside the day's working
@@ -2747,7 +2860,7 @@ function renderStats() {
     '</svg>';
 
   /* hover crosshair + tooltip */
-  const svg = box.querySelector('svg'), tip = $('#ctip');
+  const svg = box.querySelector('svg'), tip = $('#ctip'), tipWrap = $('#chartbox');
   const cross = svg.querySelector('#cross'), crossd = svg.querySelector('#crossd');
   const move = e => {
     const r = svg.getBoundingClientRect();
@@ -2758,11 +2871,20 @@ function renderStats() {
     cross.setAttribute('x1', x(i)); cross.setAttribute('x2', x(i)); cross.setAttribute('opacity', '.55');
     crossd.setAttribute('cx', x(i)); crossd.setAttribute('cy', y(val(p))); crossd.setAttribute('opacity', '1');
     tip.hidden = false;
-    tip.style.left = (x(i) * r.width / W) + 'px';
-    tip.style.top = (y(val(p)) * r.height / H) + 'px';
     tip.innerHTML = '<b style="color:' + M.color + '">' + M.fmt(val(p)) + (statMetric === 'score' ? ' / 100' : statMetric === 'rank' ? ' / 10' : '') + '</b>' +
       '<span>' + prettyD(p.ds) + '  ·  ' + p.graded + '/' + p.total + ' graded  ·  ' + durLabel(p.slots) + '</span>' +
       '<span style="display:block;margin-top:2px">score ' + p.score + '  ·  rank ' + p.rank.toFixed(1) + '  ·  <b style="display:inline;font-family:inherit;font-size:inherit" class="goldtxt">' + p.gold.toLocaleString() + ' gold</b></span>';
+    const left = x(i) * r.width / W;
+    tip.style.left = left + 'px';
+    tip.style.top = (y(val(p)) * r.height / H) + 'px';
+    /* clamp so the tooltip (rendered nowrap, centered on `left`) never spills
+       past the chart box and forces a scrollbar on the stats panel */
+    const wrapRect = tipWrap.getBoundingClientRect(), tipRect = tip.getBoundingClientRect();
+    const margin = 6;
+    let dx = 0;
+    if (tipRect.left < wrapRect.left + margin) dx = (wrapRect.left + margin) - tipRect.left;
+    else if (tipRect.right > wrapRect.right - margin) dx = (wrapRect.right - margin) - tipRect.right;
+    if (dx) tip.style.left = (left + dx) + 'px';
   };
   svg.addEventListener('mousemove', move);
   svg.addEventListener('mouseleave', () => { tip.hidden = true; cross.setAttribute('opacity', '0'); crossd.setAttribute('opacity', '0'); });
@@ -2858,6 +2980,7 @@ function openMenu() {
         : '<div class="hint">Right now everything lives in this browser only. Link a real file and every change writes straight to your disk — survives restarts, cache clears, and you can put it in Dropbox/iCloud.</div>';
   openModal(
     '<h3>☰ MENU<button class="btn sm x" data-x>✕</button></h3>' +
+    '<div class="field"><label>CLOUD SYNC  ·  PHONE + COMPUTER</label>' + cloudMenuHtml() + '</div>' +
     '<div class="field"><label>SAVE TO DISK</label>' + fsLine +
     '<div class="modrow" style="margin-top:9px">' +
     (fsStatus === 'need' ? '<button class="btn green" data-grant>RESUME AUTO-SAVE</button>' : '') +
@@ -2882,6 +3005,8 @@ function openMenu() {
   );
   const M = $('#modal');
   M.querySelectorAll('[data-x]').forEach(b => b.onclick = closeModal);
+  bindCloudMenu(M);
+  if (!fsSupported()) { M.querySelector('[data-link]').hidden = true; M.querySelector('[data-open]').hidden = true; }
   M.querySelector('[data-link]').onclick = () => linkFile(false);
   M.querySelector('[data-open]').onclick = () => linkFile(true);
   const gr = M.querySelector('[data-grant]'); if (gr) gr.onclick = () => { grantHandle(); closeModal(); };
@@ -3068,6 +3193,11 @@ function bind() {
   });
   $('#agenda').addEventListener('click', e => { const r = e.target.closest('[data-ev]'); if (r) openEventEditor(r.dataset.ev, null, r.dataset.on); });
   $('#scrim').addEventListener('pointerdown', e => { if (e.target.id === 'scrim') closeModal(); });
+  /* phone: the rail is a drawer behind the score bar */
+  $('#mbar').onclick = e => { if (e.target.closest('#mMenu')) return; document.body.classList.toggle('railopen'); };
+  $('#mMenu').onclick = openMenu;
+  $('#railShade').onclick = () => document.body.classList.remove('railopen');
+  $('.rail').addEventListener('click', e => { if (e.target.closest('button, .agrow')) setTimeout(() => document.body.classList.remove('railopen'), 120); });
   bindGrid();
 
   document.addEventListener('keydown', e => {
@@ -3095,8 +3225,466 @@ function bind() {
 
   window.addEventListener('beforeunload', () => { try { localStorage.setItem(LS_KEY, snapshot()); } catch (e) {} });
 }
+</script>
+<script>
+/* ---- 06-sync.js ---- */
+"use strict";
+/* ===================================================================
+   CLOUD SYNC — optional, off until you sign in.
 
-/* ---------------- boot ---------------- */
+   Baron still works with no account, no server and no network at all. Sign
+   in from ☰ Menu → CLOUD SYNC and the whole save (the same JSON that SAVE
+   TO DISK writes) is mirrored to your own Supabase project, so your phone
+   and your computer edit one planner.
+
+   Talks to Supabase over plain fetch (auth + PostgREST), no SDK, so the app
+   stays one self-contained file. Tables and the push_state() function live
+   in supabase/schema.sql.
+
+   How a sync works:
+   - Every save() bumps an edit counter and queues a push ~1.2s later.
+   - push_state(data, base_rev) is compare-and-swap: it only writes if the
+     cloud is still at the rev this device last saw. If another device got
+     there first it returns the cloud copy instead, and we three-way merge
+     (last synced copy = base, ours, theirs) by id — tasks, events, quotas
+     and each day's blocks — then push the merge.
+   - On focus, every 45s while visible, and on reconnect, we pull and merge
+   =================================================================== */
+const CLOUD_CFG = 'baron.cloud', CLOUD_AUTH = 'baron.auth', CLOUD_META = 'baron.sync', CLOUD_DEV = 'baron.device';
+/* where a device link points when this copy is opened from file:// */
+const PUBLIC_URL = 'https://kvyta.github.io/baron/baron.html';
+
+const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } };
+const lsSet = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+
+const cloud = {
+  cfg: lsGet(CLOUD_CFG, null),      // {url, key}
+  auth: lsGet(CLOUD_AUTH, null),    // {access_token, refresh_token, expires_at, user:{id,email}}
+  meta: lsGet(CLOUD_META, null),    // {uid, rev, base, dirty, last}
+  status: 'off',                    // off | idle | syncing | offline | error
+  err: '', timer: null, busy: false, again: false, applying: false, seq: 0, lastPull: 0
+};
+function freshMeta() { return { uid: cloud.auth && cloud.auth.user ? cloud.auth.user.id : null, rev: 0, base: null, dirty: true, last: 0 }; }
+if (!cloud.meta || (cloud.auth && cloud.meta.uid !== cloud.auth.user.id)) cloud.meta = freshMeta();
+const cloudOn = () => !!(cloud.cfg && cloud.cfg.url && cloud.cfg.key && cloud.auth && cloud.auth.access_token);
+const saveMeta = () => lsSet(CLOUD_META, cloud.meta);
+
+function deviceName() {
+  let d = lsGet(CLOUD_DEV, null);
+  if (!d) {
+    const ua = navigator.userAgent || '';
+    const kind = /iPhone|iPad|Android|Mobile/i.test(ua) ? 'phone' : 'computer';
+    d = kind + '-' + uid().slice(0, 4);
+    lsSet(CLOUD_DEV, d);
+  }
+  return d;
+}
+
+/* ---------- canonical JSON: Postgres jsonb reorders keys, so any "did this
+   change" comparison has to be key-order independent ---------- */
+function canon(v) {
+  if (v === undefined) return 'u';
+  if (v === null || typeof v !== 'object') return JSON.stringify(v);
+  if (Array.isArray(v)) return '[' + v.map(canon).join(',') + ']';
+  return '{' + Object.keys(v).filter(k => v[k] !== undefined).sort().map(k => JSON.stringify(k) + ':' + canon(v[k])).join(',') + '}';
+}
+
+/* ---------- three-way merge ----------
+   For each key: unchanged locally → take theirs; unchanged remotely → take
+   ours; changed on both → ours wins (this device is the one in your hand),
+   except a local delete never beats a remote edit. */
+function pick3(b, l, r) {
+  const cb = canon(b), cl = canon(l), cr = canon(r);
+  if (cl === cr) return l;
+  if (cl === cb) return r;
+  if (cr === cb) return l;
+  return l === undefined ? r : l;
+}
+function mergeById(B, L, R, key) {
+  key = key || 'id';
+  const mb = {}, ml = {}, mr = {}, order = [];
+  (B || []).forEach(x => { if (x) mb[x[key]] = x; });
+  (L || []).forEach(x => { if (x) { ml[x[key]] = x; order.push(x[key]); } });
+  (R || []).forEach(x => { if (x && !(x[key] in ml)) { mr[x[key]] = x; order.push(x[key]); } else if (x) mr[x[key]] = x; });
+  const seen = {}, out = [];
+  order.forEach(id => {
+    if (seen[id]) return; seen[id] = 1;
+    const v = pick3(mb[id], ml[id], mr[id]);
+    if (v !== undefined) out.push(v);
+  });
+  return out;
+}
+function mergeObj(B, L, R) {
+  B = B || {}; L = L || {}; R = R || {};
+  const out = {};
+  new Set(Object.keys(L).concat(Object.keys(R))).forEach(k => {
+    const v = pick3(B[k], L[k], R[k]);
+    if (v !== undefined) out[k] = v;
+  });
+  return out;
+}
+/* two devices can each drop a block into the same free hour — after a merge,
+   any task block that overlaps something with a better claim is trimmed to
+   its longest free run (or dropped). Claim order: events, graded blocks,
+   blocks this device had, then the rest. */
+function fixOverlaps(blocks, localIds) {
+  const rank = b => isEvent(b) ? 0 : b.done ? 1 : localIds[b.id] ? 2 : 3;
+  const sorted = blocks.map((b, i) => ({ b, i })).sort((x, y) => rank(x.b) - rank(y.b) || x.i - y.i);
+  const occ = new Array(SLOTS).fill(false), out = [];
+  sorted.forEach(({ b }) => {
+    if (isEvent(b)) { out.push(b); for (let i = b.start; i < b.start + b.len && i < SLOTS; i++) occ[i] = true; return; }
+    let best = null, run = null;
+    for (let i = b.start; i <= b.start + b.len; i++) {
+      const free = i < b.start + b.len && i < SLOTS && !occ[i];
+      if (free) { if (!run) run = { s: i, l: 0 }; run.l++; }
+      else if (run) { if (!best || run.l > best.l) best = run; run = null; }
+    }
+    if (!best) return;
+    const nb = best.l === b.len ? b : Object.assign({}, b, { start: best.s, len: best.l });
+    for (let i = nb.start; i < nb.start + nb.len; i++) occ[i] = true;
+    out.push(nb);
+  });
+  return out.sort((a, b) => a.start - b.start);
+}
+function mergeStates(B, L, R) {
+  B = B || {};
+  const out = {
+    v: 4,
+    tasks: mergeById(B.tasks, L.tasks, R.tasks),
+    events: mergeById(B.events, L.events, R.events),
+    quotas: mergeById(B.quotas, L.quotas, R.quotas),
+    templates: L.templates || R.templates || [],
+    stats: mergeObj(B.stats, L.stats, R.stats),
+    settings: mergeObj(B.settings, L.settings, R.settings),
+    days: {}
+  };
+  const Bd = B.days || {}, Ld = L.days || {}, Rd = R.days || {};
+  new Set(Object.keys(Ld).concat(Object.keys(Rd))).forEach(ds => {
+    const bb = Bd[ds] && Bd[ds].blocks, lb = Ld[ds] && Ld[ds].blocks, rb = Rd[ds] && Rd[ds].blocks;
+    let blocks = mergeById(bb, lb, rb);
+    const lid = {}; (lb || []).forEach(b => lid[b.id] = 1);
+    blocks = fixOverlaps(blocks, lid);
+    out.days[ds] = { blocks };
+  });
+  return out;
+}
+/* ---------- transport ---------- */
+const sbUrl = p => cloud.cfg.url.replace(/\/+$/, '') + p;
+async function sbFetch(path, opts, authed) {
+  opts = opts || {};
+  const go = async () => {
+    const h = Object.assign({ apikey: cloud.cfg.key, 'Content-Type': 'application/json' }, opts.headers || {});
+    if (authed !== false) h.Authorization = 'Bearer ' + cloud.auth.access_token;
+    return fetch(sbUrl(path), Object.assign({}, opts, { headers: h }));
+  };
+  if (authed !== false) await ensureToken();
+  let r = await go();
+  if (r.status === 401 && authed !== false && await refreshToken()) r = await go();
+  return r;
+}
+async function sbJson(r) {
+  const txt = await r.text();
+  let j = null; try { j = txt ? JSON.parse(txt) : null; } catch (e) {}
+  if (!r.ok) {
+    const msg = j && (j.msg || j.message || j.error_description || j.error) || ('HTTP ' + r.status);
+    const err = new Error(msg); err.status = r.status; throw err;
+  }
+  return j;
+}
+function keepSession(j) {
+  cloud.auth = {
+    access_token: j.access_token, refresh_token: j.refresh_token,
+    expires_at: j.expires_at || Math.floor(Date.now() / 1000) + (j.expires_in || 3600),
+    user: { id: j.user.id, email: j.user.email }
+  };
+  lsSet(CLOUD_AUTH, cloud.auth);
+  if (!cloud.meta || cloud.meta.uid !== cloud.auth.user.id) { cloud.meta = freshMeta(); saveMeta(); }
+}
+async function ensureToken() {
+  if (!cloud.auth) throw new Error('not signed in');
+  if (cloud.auth.expires_at - 90 < Date.now() / 1000) { if (!await refreshToken()) throw new Error('session expired — sign in again'); }
+}
+let refreshing = null;
+function refreshToken() {
+  if (refreshing) return refreshing;
+  refreshing = (async () => {
+    try {
+      const r = await fetch(sbUrl('/auth/v1/token?grant_type=refresh_token'), {
+        method: 'POST', headers: { apikey: cloud.cfg.key, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: cloud.auth.refresh_token })
+      });
+      if (!r.ok) {
+        if (r.status === 400 || r.status === 401) { cloud.auth = null; lsSet(CLOUD_AUTH, null); setCloudStatus('off'); toast('Cloud sign-in expired — sign in again'); }
+        return false;
+      }
+      keepSession(await r.json());
+      return true;
+    } catch (e) { return false; } finally { refreshing = null; }
+  })();
+  return refreshing;
+}
+async function cloudSignIn(email, password) {
+  const r = await fetch(sbUrl('/auth/v1/token?grant_type=password'), {
+    method: 'POST', headers: { apikey: cloud.cfg.key, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  });
+  keepSession(await sbJson(r));
+}
+async function cloudSignUp(email, password) {
+  const r = await fetch(sbUrl('/auth/v1/signup'), {
+    method: 'POST', headers: { apikey: cloud.cfg.key, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  });
+  const j = await sbJson(r);
+  if (j && j.access_token) { keepSession(j); return 'in'; }
+  return 'confirm';
+}
+async function cloudSignOut() {
+  try { await sbFetch('/auth/v1/logout', { method: 'POST' }); } catch (e) {}
+  cloud.auth = null; lsSet(CLOUD_AUTH, null);
+  cloud.meta = freshMeta(); saveMeta();
+  setCloudStatus('off');
+}
+
+/* ---------- status pill (rail + menu) ---------- */
+function setCloudStatus(s, err) {
+  cloud.status = s; if (err != null) cloud.err = err;
+  const els = $$('.clouddot'); if (!els.length) return;
+  const title = s === 'idle' ? 'Synced' + (cloud.meta.last ? ' · ' + new Date(cloud.meta.last).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '')
+    : s === 'syncing' ? 'Syncing…' : s === 'offline' ? 'Offline — changes will sync when you reconnect'
+      : s === 'error' ? 'Sync problem: ' + cloud.err : 'Cloud sync off';
+  els.forEach(el => { el.hidden = !cloudOn() && s === 'off'; el.dataset.s = s; el.title = title; });
+}
+
+/* ---------- the sync loop ---------- */
+function cloudQueue() {
+  if (cloud.applying) return;
+  cloud.seq++;
+  if (!cloudOn()) return;
+  cloud.meta.dirty = true; saveMeta();
+  clearTimeout(cloud.timer);
+  cloud.timer = setTimeout(() => cloudSync('push'), 1200);
+}
+async function rpcPush(data, baseRev) {
+  const r = await sbFetch('/rest/v1/rpc/push_state', { method: 'POST', body: JSON.stringify({ p_data: data, p_base_rev: baseRev, p_device: deviceName() }) });
+  const j = await sbJson(r);
+  return Array.isArray(j) ? j[0] : j;
+}
+async function pullRow() {
+  const r = await sbFetch('/rest/v1/baron_state?select=data,rev,device,updated_at');
+  const j = await sbJson(r);
+  return j && j.length ? j[0] : null;
+}
+const blankState = o => !o || (!(o.tasks || []).length && !(o.events || []).length && !Object.keys(o.days || {}).some(k => (o.days[k].blocks || []).length) && !(o.quotas || []).length);
+
+/* fold the cloud copy (at rev) into this device's state */
+function integrateRemote(remote, rev) {
+  const local = JSON.parse(snapshot());
+  const base = cloud.meta.base ? JSON.parse(cloud.meta.base) : null;
+  let merged;
+  if (!cloud.meta.dirty && base) merged = remote;                 // nothing of ours to keep
+  else if (!base && blankState(local)) merged = remote;           // fresh device
+  else merged = mergeStates(base, local, remote);
+  cloud.applying = true;
+  try {
+    adopt(merged);
+    sealPastDays(true);
+    syncAllEventBlocks();
+    try { localStorage.setItem(LS_KEY, snapshot()); } catch (e) {}
+    queueFileSave();
+  } finally { cloud.applying = false; }
+  cloud.meta.rev = rev;
+  cloud.meta.base = canon(remote);
+  cloud.meta.dirty = canon(JSON.parse(snapshot())) !== cloud.meta.base;
+  saveMeta();
+  renderAll();
+}
+async function cloudSync(reason) {
+  if (!cloudOn()) { setCloudStatus('off'); return; }
+  if (cloud.busy) { cloud.again = true; return; }
+  if (!navigator.onLine) { setCloudStatus('offline'); return; }
+  /* never swap state out from under an open editor — try again shortly */
+  if (!$('#scrim').hidden) { clearTimeout(cloud.timer); cloud.timer = setTimeout(() => cloudSync(reason), 2500); return; }
+  cloud.busy = true; setCloudStatus('syncing');
+  try {
+    for (let round = 0; round < 3; round++) {
+      if (cloud.meta.dirty || !cloud.meta.rev) {
+        const seq = cloud.seq, data = JSON.parse(snapshot());
+        const res = await rpcPush(data, cloud.meta.rev || 0);
+        if (res && res.ok) {
+          cloud.meta.rev = res.rev; cloud.meta.base = canon(data);
+          cloud.meta.dirty = cloud.seq !== seq;          // edited again mid-flight?
+          cloud.meta.last = Date.now(); saveMeta();
+          if (!cloud.meta.dirty) break;
+        } else if (res && res.data) {
+          integrateRemote(res.data, res.rev);
+          if (!cloud.meta.dirty) break;
+        } else break;
+      } else {
+        const row = await pullRow();
+        if (row && row.rev !== cloud.meta.rev) { integrateRemote(row.data, row.rev); if (cloud.meta.dirty) continue; }
+        else if (!row) { cloud.meta.dirty = true; continue; }
+        cloud.meta.last = Date.now(); saveMeta();
+        break;
+      }
+    }
+    cloud.lastPull = Date.now();
+    setCloudStatus('idle', '');
+  } catch (e) {
+    console.warn('sync', e);
+    setCloudStatus(navigator.onLine ? 'error' : 'offline', e.message);
+  } finally {
+    cloud.busy = false;
+  }
+  if (cloud.again) { cloud.again = false; setTimeout(() => cloudSync('again'), 60); }
+}
+
+/* ---------- device link: carries the project URL + public key, never a password ---------- */
+const b64u = s => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const unb64u = s => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/'))));
+function deviceLink() {
+  const here = /^https?:/.test(location.protocol) ? location.origin + location.pathname : PUBLIC_URL;
+  return here + '#cloud=' + b64u(JSON.stringify({ u: cloud.cfg.url, k: cloud.cfg.key }));
+}
+function readCloudHash() {
+  const m = /[#&]cloud=([^&]+)/.exec(location.hash || '');
+  if (!m) return false;
+  try {
+    const o = JSON.parse(unb64u(m[1]));
+    if (o.u && o.k) { cloud.cfg = { url: o.u, key: o.k }; lsSet(CLOUD_CFG, cloud.cfg); }
+  } catch (e) { console.warn('bad cloud link'); }
+  try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+  return true;
+}
+function qrSvg(text) {
+  const q = qrcode(0, 'M'); q.addData(text); q.make();
+  const n = q.getModuleCount(), m = 2;
+  let p = '';
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (q.isDark(r, c)) p += 'M' + (c + m) + ' ' + (r + m) + 'h1v1h-1z';
+  return '<svg viewBox="0 0 ' + (n + 2 * m) + ' ' + (n + 2 * m) + '" shape-rendering="crispEdges" style="width:100%;height:auto;display:block;background:#fff;border-radius:8px"><path d="' + p + '" fill="#0a0d10"/></svg>';
+}
+
+/* ---------- UI ---------- */
+function cloudMenuHtml() {
+  if (!cloud.cfg) return '<div class="hint">Off. Connect your Supabase project to edit this planner from your phone too.</div>' +
+    '<div class="modrow" style="margin-top:9px"><button class="btn sm green" data-cloud="setup">SET UP CLOUD SYNC</button></div>';
+  if (!cloudOn()) return '<div class="hint">Project connected, not signed in.</div>' +
+    '<div class="modrow" style="margin-top:9px"><button class="btn sm green" data-cloud="signin">SIGN IN</button><button class="btn sm" data-cloud="setup">CHANGE PROJECT</button></div>';
+  const st = cloud.status === 'idle' ? '● synced' + (cloud.meta.last ? ' at ' + new Date(cloud.meta.last).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '')
+    : cloud.status === 'syncing' ? '● syncing…' : cloud.status === 'offline' ? '● offline — will sync on reconnect' : cloud.status === 'error' ? '● ' + esc(cloud.err) : '● waiting';
+  return '<div class="li"><span>' + esc(cloud.auth.user.email) + '</span><span style="margin-left:auto;font-size:11px;opacity:.75">' + st + '</span></div>' +
+    '<div class="modrow" style="margin-top:9px"><button class="btn sm blue" data-cloud="now">SYNC NOW</button>' +
+    '<button class="btn sm gold" data-cloud="link">LINK A DEVICE</button><div class="spacer"></div>' +
+    '<button class="btn sm red" data-cloud="out">SIGN OUT</button></div>';
+}
+function bindCloudMenu(M) {
+  M.querySelectorAll('[data-cloud]').forEach(b => b.onclick = () => {
+    const a = b.dataset.cloud;
+    if (a === 'setup') openCloudSetup();
+    else if (a === 'signin') openCloudSignIn();
+    else if (a === 'now') { closeModal(); cloudSync('manual').then(() => toast(cloud.status === 'idle' ? 'Synced' : 'Sync: ' + (cloud.err || cloud.status))); }
+    else if (a === 'link') openDeviceLink();
+    else if (a === 'out') { cloudSignOut(); closeModal(); toast('Signed out — this device keeps its copy'); }
+  });
+}
+function openCloudSetup() {
+  openModal(
+    '<h3>CLOUD SYNC<button class="btn sm x" data-x>✕</button></h3>' +
+    '<div class="hint" style="margin-bottom:10px">Paste your Supabase project URL and its <b>publishable</b> (or anon) key — both are safe to share, row-level security keeps each account to its own data. ' +
+    'New project? Run <b>supabase/schema.sql</b> from the repo in its SQL editor first.</div>' +
+    '<div class="field"><label>PROJECT URL</label><input class="inp" id="cfU" data-autofocus placeholder="https://xxxx.supabase.co" value="' + esc(cloud.cfg ? cloud.cfg.url : '') + '"></div>' +
+    '<div class="field"><label>PUBLISHABLE KEY</label><input class="inp" id="cfK" placeholder="sb_publishable_…" value="' + esc(cloud.cfg ? cloud.cfg.key : '') + '"></div>' +
+    '<div class="modrow">' + (cloud.cfg ? '<button class="btn sm red" data-forget>DISCONNECT</button>' : '') + '<div class="spacer"></div><button class="btn green" data-ok>NEXT</button></div>'
+  );
+  const M = $('#modal');
+  M.querySelector('[data-x]').onclick = closeModal;
+  const fg = M.querySelector('[data-forget]');
+  if (fg) fg.onclick = () => { cloudSignOut(); cloud.cfg = null; lsSet(CLOUD_CFG, null); closeModal(); toast('Cloud sync disconnected'); };
+  M.querySelector('[data-ok]').onclick = () => {
+    const u = M.querySelector('#cfU').value.trim(), k = M.querySelector('#cfK').value.trim();
+    if (!/^https:\/\/.+/.test(u) || k.length < 20) { toast('Need the https:// URL and the key'); return; }
+    if (!cloud.cfg || cloud.cfg.url !== u) { cloud.auth = null; lsSet(CLOUD_AUTH, null); }
+    cloud.cfg = { url: u, key: k }; lsSet(CLOUD_CFG, cloud.cfg);
+    openCloudSignIn();
+  };
+}
+function openCloudSignIn(first) {
+  openModal(
+    '<h3>' + (first ? 'LINK THIS DEVICE' : 'SIGN IN') + '<button class="btn sm x" data-x>✕</button></h3>' +
+    (first ? '<div class="hint" style="margin-bottom:10px">This link connected Baron to your cloud project. Sign in and this device picks up your planner.</div>' : '') +
+    '<div class="field"><label>EMAIL</label><input class="inp" id="cfE" type="email" autocomplete="username" data-autofocus></div>' +
+    '<div class="field"><label>PASSWORD</label><input class="inp" id="cfP" type="password" autocomplete="current-password"></div>' +
+    '<div class="hint" id="cfMsg" style="min-height:16px"></div>' +
+    '<div class="modrow"><button class="btn sm" data-up>CREATE ACCOUNT</button><div class="spacer"></div><button class="btn green" data-in>SIGN IN</button></div>'
+  );
+  const M = $('#modal'), msg = M.querySelector('#cfMsg');
+  M.querySelector('[data-x]').onclick = closeModal;
+  const vals = () => [M.querySelector('#cfE').value.trim(), M.querySelector('#cfP').value];
+  const busy = on => M.querySelectorAll('button').forEach(b => b.disabled = on);
+  const after = () => { closeModal(); setCloudStatus('syncing'); cloudSync('signin').then(() => { toast(cloud.status === 'idle' ? 'Cloud sync on' : 'Signed in — sync: ' + (cloud.err || cloud.status)); renderAll(); }); };
+  M.querySelector('[data-in]').onclick = async () => {
+    const [e, p] = vals(); if (!e || !p) { msg.textContent = 'Email and password, please.'; return; }
+    busy(true); msg.textContent = 'Signing in…';
+    try { await cloudSignIn(e, p); after(); }
+    catch (err) { busy(false); msg.textContent = /confirm/i.test(err.message) ? 'Confirm your email first (check your inbox), then sign in.' : err.message; }
+  };
+  M.querySelector('[data-up]').onclick = async () => {
+    const [e, p] = vals(); if (!e || p.length < 6) { msg.textContent = 'Email, and a password of 6+ characters.'; return; }
+    busy(true); msg.textContent = 'Creating account…';
+    try {
+      const res = await cloudSignUp(e, p);
+      if (res === 'in') after();
+      else { busy(false); msg.innerHTML = 'Account created. <b>Check your email</b> and click the confirmation link, then come back and SIGN IN.'; }
+    } catch (err) { busy(false); msg.textContent = err.message; }
+  };
+  M.querySelector('#cfP').addEventListener('keydown', ev => { if (ev.key === 'Enter') M.querySelector('[data-in]').click(); });
+}
+function openDeviceLink() {
+  const link = deviceLink();
+  openModal(
+    '<h3>LINK A DEVICE<button class="btn sm x" data-x>✕</button></h3>' +
+    '<div style="max-width:240px;margin:0 auto 12px">' + qrSvg(link) + '</div>' +
+    '<div class="hint" style="margin-bottom:10px">Scan this with your phone’s camera (or send yourself the link). It opens Baron already pointed at your cloud project — just sign in. ' +
+    'Then use your browser’s <b>Add to Home Screen</b> and Baron runs like an app.</div>' +
+    '<input class="inp ro" id="dlUrl" readonly value="' + esc(link) + '">' +
+    '<div class="modrow"><button class="btn sm" data-copy>COPY LINK</button>' + (navigator.share ? '<button class="btn sm blue" data-share>SHARE…</button>' : '') +
+    '<div class="spacer"></div><button class="btn gold" data-x>DONE</button></div>'
+  );
+  const M = $('#modal');
+  M.querySelectorAll('[data-x]').forEach(b => b.onclick = closeModal);
+  M.querySelector('[data-copy]').onclick = () => {
+    const i = M.querySelector('#dlUrl'); i.select();
+    (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject()).then(() => toast('Link copied'), () => { document.execCommand('copy'); toast('Link copied'); });
+  };
+  const sh = M.querySelector('[data-share]');
+  if (sh) sh.onclick = () => navigator.share({ title: 'Baron', url: link }).catch(() => {});
+}
+
+function startCloud() {
+  const linked = readCloudHash();
+  setCloudStatus(cloudOn() ? 'idle' : 'off');
+  if (linked && cloud.cfg && !cloudOn()) setTimeout(() => openCloudSignIn(true), 400);
+  if (cloudOn()) cloudSync('boot');
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Date.now() - cloud.lastPull > 5000) cloudSync('focus'); });
+  window.addEventListener('online', () => cloudSync('online'));
+  window.addEventListener('offline', () => setCloudStatus(cloudOn() ? 'offline' : 'off'));
+  setInterval(() => { if (document.visibilityState === 'visible' && cloudOn()) cloudSync('poll'); }, 45000);
+}
+</script>
+<script>
+/* ---- 08-qr.js ---- */
+/* QR Code Generator for JavaScript — Copyright (c) 2009 Kazuhiko Arase — MIT licence
+   (qrcode-generator 1.4.4, https://github.com/kazuhikoarase/qrcode-generator).
+   Vendored, minified, only used to draw the LINK A DEVICE code. Full licence: licenses/MIT-qrcode-generator.txt */
+var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],f={},c=function(t,r){o=function(t){for(var r=new Array(t),e=0;e<t;e+=1){r[e]=new Array(t);for(var n=0;n<t;n+=1)r[e][n]=null}return r}(i=4*e+17),l(0,0),l(i-7,0),l(0,i-7),s(),h(),d(t,r),e>=7&&v(t),null==a&&(a=p(e,n,u)),w(a,r)},l=function(t,r){for(var e=-1;e<=7;e+=1)if(!(t+e<=-1||i<=t+e))for(var n=-1;n<=7;n+=1)r+n<=-1||i<=r+n||(o[t+e][r+n]=0<=e&&e<=6&&(0==n||6==n)||0<=n&&n<=6&&(0==e||6==e)||2<=e&&e<=4&&2<=n&&n<=4)},h=function(){for(var t=8;t<i-8;t+=1)null==o[t][6]&&(o[t][6]=t%2==0);for(var r=8;r<i-8;r+=1)null==o[6][r]&&(o[6][r]=r%2==0)},s=function(){for(var t=B.getPatternPosition(e),r=0;r<t.length;r+=1)for(var n=0;n<t.length;n+=1){var i=t[r],a=t[n];if(null==o[i][a])for(var u=-2;u<=2;u+=1)for(var f=-2;f<=2;f+=1)o[i+u][a+f]=-2==u||2==u||-2==f||2==f||0==u&&0==f}},v=function(t){for(var r=B.getBCHTypeNumber(e),n=0;n<18;n+=1){var a=!t&&1==(r>>n&1);o[Math.floor(n/3)][n%3+i-8-3]=a}for(n=0;n<18;n+=1){a=!t&&1==(r>>n&1);o[n%3+i-8-3][Math.floor(n/3)]=a}},d=function(t,r){for(var e=n<<3|r,a=B.getBCHTypeInfo(e),u=0;u<15;u+=1){var f=!t&&1==(a>>u&1);u<6?o[u][8]=f:u<8?o[u+1][8]=f:o[i-15+u][8]=f}for(u=0;u<15;u+=1){f=!t&&1==(a>>u&1);u<8?o[8][i-u-1]=f:u<9?o[8][15-u-1+1]=f:o[8][15-u-1]=f}o[i-8][8]=!t},w=function(t,r){for(var e=-1,n=i-1,a=7,u=0,f=B.getMaskFunction(r),c=i-1;c>0;c-=2)for(6==c&&(c-=1);;){for(var g=0;g<2;g+=1)if(null==o[n][c-g]){var l=!1;u<t.length&&(l=1==(t[u]>>>a&1)),f(n,c-g)&&(l=!l),o[n][c-g]=l,-1==(a-=1)&&(u+=1,a=7)}if((n+=e)<0||i<=n){n-=e,e=-e;break}}},p=function(t,r,e){for(var n=A.getRSBlocks(t,r),o=b(),i=0;i<e.length;i+=1){var a=e[i];o.put(a.getMode(),4),o.put(a.getLength(),B.getLengthInBits(a.getMode(),t)),a.write(o)}var u=0;for(i=0;i<n.length;i+=1)u+=n[i].dataCount;if(o.getLengthInBits()>8*u)throw"code length overflow. ("+o.getLengthInBits()+">"+8*u+")";for(o.getLengthInBits()+4<=8*u&&o.put(0,4);o.getLengthInBits()%8!=0;)o.putBit(!1);for(;!(o.getLengthInBits()>=8*u||(o.put(236,8),o.getLengthInBits()>=8*u));)o.put(17,8);return function(t,r){for(var e=0,n=0,o=0,i=new Array(r.length),a=new Array(r.length),u=0;u<r.length;u+=1){var f=r[u].dataCount,c=r[u].totalCount-f;n=Math.max(n,f),o=Math.max(o,c),i[u]=new Array(f);for(var g=0;g<i[u].length;g+=1)i[u][g]=255&t.getBuffer()[g+e];e+=f;var l=B.getErrorCorrectPolynomial(c),h=k(i[u],l.getLength()-1).mod(l);for(a[u]=new Array(l.getLength()-1),g=0;g<a[u].length;g+=1){var s=g+h.getLength()-a[u].length;a[u][g]=s>=0?h.getAt(s):0}}var v=0;for(g=0;g<r.length;g+=1)v+=r[g].totalCount;var d=new Array(v),w=0;for(g=0;g<n;g+=1)for(u=0;u<r.length;u+=1)g<i[u].length&&(d[w]=i[u][g],w+=1);for(g=0;g<o;g+=1)for(u=0;u<r.length;u+=1)g<a[u].length&&(d[w]=a[u][g],w+=1);return d}(o,n)};f.addData=function(t,r){var e=null;switch(r=r||"Byte"){case"Numeric":e=M(t);break;case"Alphanumeric":e=x(t);break;case"Byte":e=m(t);break;case"Kanji":e=L(t);break;default:throw"mode:"+r}u.push(e),a=null},f.isDark=function(t,r){if(t<0||i<=t||r<0||i<=r)throw t+","+r;return o[t][r]},f.getModuleCount=function(){return i},f.make=function(){if(e<1){for(var t=1;t<40;t++){for(var r=A.getRSBlocks(t,n),o=b(),i=0;i<u.length;i++){var a=u[i];o.put(a.getMode(),4),o.put(a.getLength(),B.getLengthInBits(a.getMode(),t)),a.write(o)}var g=0;for(i=0;i<r.length;i++)g+=r[i].dataCount;if(o.getLengthInBits()<=8*g)break}e=t}c(!1,function(){for(var t=0,r=0,e=0;e<8;e+=1){c(!0,e);var n=B.getLostPoint(f);(0==e||t>n)&&(t=n,r=e)}return r}())},f.createTableTag=function(t,r){t=t||2;var e="";e+='<table style="',e+=" border-width: 0px; border-style: none;",e+=" border-collapse: collapse;",e+=" padding: 0px; margin: "+(r=void 0===r?4*t:r)+"px;",e+='">',e+="<tbody>";for(var n=0;n<f.getModuleCount();n+=1){e+="<tr>";for(var o=0;o<f.getModuleCount();o+=1)e+='<td style="',e+=" border-width: 0px; border-style: none;",e+=" border-collapse: collapse;",e+=" padding: 0px; margin: 0px;",e+=" width: "+t+"px;",e+=" height: "+t+"px;",e+=" background-color: ",e+=f.isDark(n,o)?"#000000":"#ffffff",e+=";",e+='"/>';e+="</tr>"}return e+="</tbody>",e+="</table>"},f.createSvgTag=function(t,r,e,n){var o={};"object"==typeof arguments[0]&&(t=(o=arguments[0]).cellSize,r=o.margin,e=o.alt,n=o.title),t=t||2,r=void 0===r?4*t:r,(e="string"==typeof e?{text:e}:e||{}).text=e.text||null,e.id=e.text?e.id||"qrcode-description":null,(n="string"==typeof n?{text:n}:n||{}).text=n.text||null,n.id=n.text?n.id||"qrcode-title":null;var i,a,u,c,g=f.getModuleCount()*t+2*r,l="";for(c="l"+t+",0 0,"+t+" -"+t+",0 0,-"+t+"z ",l+='<svg version="1.1" xmlns="http://www.w3.org/2000/svg"',l+=o.scalable?"":' width="'+g+'px" height="'+g+'px"',l+=' viewBox="0 0 '+g+" "+g+'" ',l+=' preserveAspectRatio="xMinYMin meet"',l+=n.text||e.text?' role="img" aria-labelledby="'+y([n.id,e.id].join(" ").trim())+'"':"",l+=">",l+=n.text?'<title id="'+y(n.id)+'">'+y(n.text)+"</title>":"",l+=e.text?'<description id="'+y(e.id)+'">'+y(e.text)+"</description>":"",l+='<rect width="100%" height="100%" fill="white" cx="0" cy="0"/>',l+='<path d="',a=0;a<f.getModuleCount();a+=1)for(u=a*t+r,i=0;i<f.getModuleCount();i+=1)f.isDark(a,i)&&(l+="M"+(i*t+r)+","+u+c);return l+='" stroke="transparent" fill="black"/>',l+="</svg>"},f.createDataURL=function(t,r){t=t||2,r=void 0===r?4*t:r;var e=f.getModuleCount()*t+2*r,n=r,o=e-r;return I(e,e,function(r,e){if(n<=r&&r<o&&n<=e&&e<o){var i=Math.floor((r-n)/t),a=Math.floor((e-n)/t);return f.isDark(a,i)?0:1}return 1})},f.createImgTag=function(t,r,e){t=t||2,r=void 0===r?4*t:r;var n=f.getModuleCount()*t+2*r,o="";return o+="<img",o+=' src="',o+=f.createDataURL(t,r),o+='"',o+=' width="',o+=n,o+='"',o+=' height="',o+=n,o+='"',e&&(o+=' alt="',o+=y(e),o+='"'),o+="/>"};var y=function(t){for(var r="",e=0;e<t.length;e+=1){var n=t.charAt(e);switch(n){case"<":r+="&lt;";break;case">":r+="&gt;";break;case"&":r+="&amp;";break;case'"':r+="&quot;";break;default:r+=n}}return r};return f.createASCII=function(t,r){if((t=t||1)<2)return function(t){t=void 0===t?2:t;var r,e,n,o,i,a=1*f.getModuleCount()+2*t,u=t,c=a-t,g={"██":"█","█ ":"▀"," █":"▄","  ":" "},l={"██":"▀","█ ":"▀"," █":" ","  ":" "},h="";for(r=0;r<a;r+=2){for(n=Math.floor((r-u)/1),o=Math.floor((r+1-u)/1),e=0;e<a;e+=1)i="█",u<=e&&e<c&&u<=r&&r<c&&f.isDark(n,Math.floor((e-u)/1))&&(i=" "),u<=e&&e<c&&u<=r+1&&r+1<c&&f.isDark(o,Math.floor((e-u)/1))?i+=" ":i+="█",h+=t<1&&r+1>=c?l[i]:g[i];h+="\n"}return a%2&&t>0?h.substring(0,h.length-a-1)+Array(a+1).join("▀"):h.substring(0,h.length-1)}(r);t-=1,r=void 0===r?2*t:r;var e,n,o,i,a=f.getModuleCount()*t+2*r,u=r,c=a-r,g=Array(t+1).join("██"),l=Array(t+1).join("  "),h="",s="";for(e=0;e<a;e+=1){for(o=Math.floor((e-u)/t),s="",n=0;n<a;n+=1)i=1,u<=n&&n<c&&u<=e&&e<c&&f.isDark(o,Math.floor((n-u)/t))&&(i=0),s+=i?g:l;for(o=0;o<t;o+=1)h+=s+"\n"}return h.substring(0,h.length-1)},f.renderTo2dContext=function(t,r){r=r||2;for(var e=f.getModuleCount(),n=0;n<e;n++)for(var o=0;o<e;o++)t.fillStyle=f.isDark(n,o)?"black":"white",t.fillRect(n*r,o*r,r,r)},f};t.stringToBytes=(t.stringToBytesFuncs={default:function(t){for(var r=[],e=0;e<t.length;e+=1){var n=t.charCodeAt(e);r.push(255&n)}return r}}).default,t.createStringToBytes=function(t,r){var e=function(){for(var e=S(t),n=function(){var t=e.read();if(-1==t)throw"eof";return t},o=0,i={};;){var a=e.read();if(-1==a)break;var u=n(),f=n()<<8|n();i[String.fromCharCode(a<<8|u)]=f,o+=1}if(o!=r)throw o+" != "+r;return i}(),n="?".charCodeAt(0);return function(t){for(var r=[],o=0;o<t.length;o+=1){var i=t.charCodeAt(o);if(i<128)r.push(i);else{var a=e[t.charAt(o)];"number"==typeof a?(255&a)==a?r.push(a):(r.push(a>>>8),r.push(255&a)):r.push(n)}}return r}};var r,e,n,o,i,a=1,u=2,f=4,c=8,g={L:1,M:0,Q:3,H:2},l=0,h=1,s=2,v=3,d=4,w=5,p=6,y=7,B=(r=[[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],[6,30,56,82],[6,30,58,86],[6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],[6,28,54,80,106],[6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98,122],[6,30,54,78,102,126],[6,26,52,78,104,130],[6,30,56,82,108,134],[6,34,60,86,112,138],[6,30,58,86,114,142],[6,34,62,90,118,146],[6,30,54,78,102,126,150],[6,24,50,76,102,128,154],[6,28,54,80,106,132,158],[6,32,58,84,110,136,162],[6,26,54,82,110,138,166],[6,30,58,86,114,142,170]],e=1335,n=7973,i=function(t){for(var r=0;0!=t;)r+=1,t>>>=1;return r},(o={}).getBCHTypeInfo=function(t){for(var r=t<<10;i(r)-i(e)>=0;)r^=e<<i(r)-i(e);return 21522^(t<<10|r)},o.getBCHTypeNumber=function(t){for(var r=t<<12;i(r)-i(n)>=0;)r^=n<<i(r)-i(n);return t<<12|r},o.getPatternPosition=function(t){return r[t-1]},o.getMaskFunction=function(t){switch(t){case l:return function(t,r){return(t+r)%2==0};case h:return function(t,r){return t%2==0};case s:return function(t,r){return r%3==0};case v:return function(t,r){return(t+r)%3==0};case d:return function(t,r){return(Math.floor(t/2)+Math.floor(r/3))%2==0};case w:return function(t,r){return t*r%2+t*r%3==0};case p:return function(t,r){return(t*r%2+t*r%3)%2==0};case y:return function(t,r){return(t*r%3+(t+r)%2)%2==0};default:throw"bad maskPattern:"+t}},o.getErrorCorrectPolynomial=function(t){for(var r=k([1],0),e=0;e<t;e+=1)r=r.multiply(k([1,C.gexp(e)],0));return r},o.getLengthInBits=function(t,r){if(1<=r&&r<10)switch(t){case a:return 10;case u:return 9;case f:case c:return 8;default:throw"mode:"+t}else if(r<27)switch(t){case a:return 12;case u:return 11;case f:return 16;case c:return 10;default:throw"mode:"+t}else{if(!(r<41))throw"type:"+r;switch(t){case a:return 14;case u:return 13;case f:return 16;case c:return 12;default:throw"mode:"+t}}},o.getLostPoint=function(t){for(var r=t.getModuleCount(),e=0,n=0;n<r;n+=1)for(var o=0;o<r;o+=1){for(var i=0,a=t.isDark(n,o),u=-1;u<=1;u+=1)if(!(n+u<0||r<=n+u))for(var f=-1;f<=1;f+=1)o+f<0||r<=o+f||0==u&&0==f||a==t.isDark(n+u,o+f)&&(i+=1);i>5&&(e+=3+i-5)}for(n=0;n<r-1;n+=1)for(o=0;o<r-1;o+=1){var c=0;t.isDark(n,o)&&(c+=1),t.isDark(n+1,o)&&(c+=1),t.isDark(n,o+1)&&(c+=1),t.isDark(n+1,o+1)&&(c+=1),0!=c&&4!=c||(e+=3)}for(n=0;n<r;n+=1)for(o=0;o<r-6;o+=1)t.isDark(n,o)&&!t.isDark(n,o+1)&&t.isDark(n,o+2)&&t.isDark(n,o+3)&&t.isDark(n,o+4)&&!t.isDark(n,o+5)&&t.isDark(n,o+6)&&(e+=40);for(o=0;o<r;o+=1)for(n=0;n<r-6;n+=1)t.isDark(n,o)&&!t.isDark(n+1,o)&&t.isDark(n+2,o)&&t.isDark(n+3,o)&&t.isDark(n+4,o)&&!t.isDark(n+5,o)&&t.isDark(n+6,o)&&(e+=40);var g=0;for(o=0;o<r;o+=1)for(n=0;n<r;n+=1)t.isDark(n,o)&&(g+=1);return e+=Math.abs(100*g/r/r-50)/5*10},o),C=function(){for(var t=new Array(256),r=new Array(256),e=0;e<8;e+=1)t[e]=1<<e;for(e=8;e<256;e+=1)t[e]=t[e-4]^t[e-5]^t[e-6]^t[e-8];for(e=0;e<255;e+=1)r[t[e]]=e;var n={glog:function(t){if(t<1)throw"glog("+t+")";return r[t]},gexp:function(r){for(;r<0;)r+=255;for(;r>=256;)r-=255;return t[r]}};return n}();function k(t,r){if(void 0===t.length)throw t.length+"/"+r;var e=function(){for(var e=0;e<t.length&&0==t[e];)e+=1;for(var n=new Array(t.length-e+r),o=0;o<t.length-e;o+=1)n[o]=t[o+e];return n}(),n={getAt:function(t){return e[t]},getLength:function(){return e.length},multiply:function(t){for(var r=new Array(n.getLength()+t.getLength()-1),e=0;e<n.getLength();e+=1)for(var o=0;o<t.getLength();o+=1)r[e+o]^=C.gexp(C.glog(n.getAt(e))+C.glog(t.getAt(o)));return k(r,0)},mod:function(t){if(n.getLength()-t.getLength()<0)return n;for(var r=C.glog(n.getAt(0))-C.glog(t.getAt(0)),e=new Array(n.getLength()),o=0;o<n.getLength();o+=1)e[o]=n.getAt(o);for(o=0;o<t.getLength();o+=1)e[o]^=C.gexp(C.glog(t.getAt(o))+r);return k(e,0).mod(t)}};return n}var A=function(){var t=[[1,26,19],[1,26,16],[1,26,13],[1,26,9],[1,44,34],[1,44,28],[1,44,22],[1,44,16],[1,70,55],[1,70,44],[2,35,17],[2,35,13],[1,100,80],[2,50,32],[2,50,24],[4,25,9],[1,134,108],[2,67,43],[2,33,15,2,34,16],[2,33,11,2,34,12],[2,86,68],[4,43,27],[4,43,19],[4,43,15],[2,98,78],[4,49,31],[2,32,14,4,33,15],[4,39,13,1,40,14],[2,121,97],[2,60,38,2,61,39],[4,40,18,2,41,19],[4,40,14,2,41,15],[2,146,116],[3,58,36,2,59,37],[4,36,16,4,37,17],[4,36,12,4,37,13],[2,86,68,2,87,69],[4,69,43,1,70,44],[6,43,19,2,44,20],[6,43,15,2,44,16],[4,101,81],[1,80,50,4,81,51],[4,50,22,4,51,23],[3,36,12,8,37,13],[2,116,92,2,117,93],[6,58,36,2,59,37],[4,46,20,6,47,21],[7,42,14,4,43,15],[4,133,107],[8,59,37,1,60,38],[8,44,20,4,45,21],[12,33,11,4,34,12],[3,145,115,1,146,116],[4,64,40,5,65,41],[11,36,16,5,37,17],[11,36,12,5,37,13],[5,109,87,1,110,88],[5,65,41,5,66,42],[5,54,24,7,55,25],[11,36,12,7,37,13],[5,122,98,1,123,99],[7,73,45,3,74,46],[15,43,19,2,44,20],[3,45,15,13,46,16],[1,135,107,5,136,108],[10,74,46,1,75,47],[1,50,22,15,51,23],[2,42,14,17,43,15],[5,150,120,1,151,121],[9,69,43,4,70,44],[17,50,22,1,51,23],[2,42,14,19,43,15],[3,141,113,4,142,114],[3,70,44,11,71,45],[17,47,21,4,48,22],[9,39,13,16,40,14],[3,135,107,5,136,108],[3,67,41,13,68,42],[15,54,24,5,55,25],[15,43,15,10,44,16],[4,144,116,4,145,117],[17,68,42],[17,50,22,6,51,23],[19,46,16,6,47,17],[2,139,111,7,140,112],[17,74,46],[7,54,24,16,55,25],[34,37,13],[4,151,121,5,152,122],[4,75,47,14,76,48],[11,54,24,14,55,25],[16,45,15,14,46,16],[6,147,117,4,148,118],[6,73,45,14,74,46],[11,54,24,16,55,25],[30,46,16,2,47,17],[8,132,106,4,133,107],[8,75,47,13,76,48],[7,54,24,22,55,25],[22,45,15,13,46,16],[10,142,114,2,143,115],[19,74,46,4,75,47],[28,50,22,6,51,23],[33,46,16,4,47,17],[8,152,122,4,153,123],[22,73,45,3,74,46],[8,53,23,26,54,24],[12,45,15,28,46,16],[3,147,117,10,148,118],[3,73,45,23,74,46],[4,54,24,31,55,25],[11,45,15,31,46,16],[7,146,116,7,147,117],[21,73,45,7,74,46],[1,53,23,37,54,24],[19,45,15,26,46,16],[5,145,115,10,146,116],[19,75,47,10,76,48],[15,54,24,25,55,25],[23,45,15,25,46,16],[13,145,115,3,146,116],[2,74,46,29,75,47],[42,54,24,1,55,25],[23,45,15,28,46,16],[17,145,115],[10,74,46,23,75,47],[10,54,24,35,55,25],[19,45,15,35,46,16],[17,145,115,1,146,116],[14,74,46,21,75,47],[29,54,24,19,55,25],[11,45,15,46,46,16],[13,145,115,6,146,116],[14,74,46,23,75,47],[44,54,24,7,55,25],[59,46,16,1,47,17],[12,151,121,7,152,122],[12,75,47,26,76,48],[39,54,24,14,55,25],[22,45,15,41,46,16],[6,151,121,14,152,122],[6,75,47,34,76,48],[46,54,24,10,55,25],[2,45,15,64,46,16],[17,152,122,4,153,123],[29,74,46,14,75,47],[49,54,24,10,55,25],[24,45,15,46,46,16],[4,152,122,18,153,123],[13,74,46,32,75,47],[48,54,24,14,55,25],[42,45,15,32,46,16],[20,147,117,4,148,118],[40,75,47,7,76,48],[43,54,24,22,55,25],[10,45,15,67,46,16],[19,148,118,6,149,119],[18,75,47,31,76,48],[34,54,24,34,55,25],[20,45,15,61,46,16]],r=function(t,r){var e={};return e.totalCount=t,e.dataCount=r,e},e={};return e.getRSBlocks=function(e,n){var o=function(r,e){switch(e){case g.L:return t[4*(r-1)+0];case g.M:return t[4*(r-1)+1];case g.Q:return t[4*(r-1)+2];case g.H:return t[4*(r-1)+3];default:return}}(e,n);if(void 0===o)throw"bad rs block @ typeNumber:"+e+"/errorCorrectionLevel:"+n;for(var i=o.length/3,a=[],u=0;u<i;u+=1)for(var f=o[3*u+0],c=o[3*u+1],l=o[3*u+2],h=0;h<f;h+=1)a.push(r(c,l));return a},e}(),b=function(){var t=[],r=0,e={getBuffer:function(){return t},getAt:function(r){var e=Math.floor(r/8);return 1==(t[e]>>>7-r%8&1)},put:function(t,r){for(var n=0;n<r;n+=1)e.putBit(1==(t>>>r-n-1&1))},getLengthInBits:function(){return r},putBit:function(e){var n=Math.floor(r/8);t.length<=n&&t.push(0),e&&(t[n]|=128>>>r%8),r+=1}};return e},M=function(t){var r=a,e=t,n={getMode:function(){return r},getLength:function(t){return e.length},write:function(t){for(var r=e,n=0;n+2<r.length;)t.put(o(r.substring(n,n+3)),10),n+=3;n<r.length&&(r.length-n==1?t.put(o(r.substring(n,n+1)),4):r.length-n==2&&t.put(o(r.substring(n,n+2)),7))}},o=function(t){for(var r=0,e=0;e<t.length;e+=1)r=10*r+i(t.charAt(e));return r},i=function(t){if("0"<=t&&t<="9")return t.charCodeAt(0)-"0".charCodeAt(0);throw"illegal char :"+t};return n},x=function(t){var r=u,e=t,n={getMode:function(){return r},getLength:function(t){return e.length},write:function(t){for(var r=e,n=0;n+1<r.length;)t.put(45*o(r.charAt(n))+o(r.charAt(n+1)),11),n+=2;n<r.length&&t.put(o(r.charAt(n)),6)}},o=function(t){if("0"<=t&&t<="9")return t.charCodeAt(0)-"0".charCodeAt(0);if("A"<=t&&t<="Z")return t.charCodeAt(0)-"A".charCodeAt(0)+10;switch(t){case" ":return 36;case"$":return 37;case"%":return 38;case"*":return 39;case"+":return 40;case"-":return 41;case".":return 42;case"/":return 43;case":":return 44;default:throw"illegal char :"+t}};return n},m=function(r){var e=f,n=t.stringToBytes(r),o={getMode:function(){return e},getLength:function(t){return n.length},write:function(t){for(var r=0;r<n.length;r+=1)t.put(n[r],8)}};return o},L=function(r){var e=c,n=t.stringToBytesFuncs.SJIS;if(!n)throw"sjis not supported.";!function(){var t=n("友");if(2!=t.length||38726!=(t[0]<<8|t[1]))throw"sjis not supported."}();var o=n(r),i={getMode:function(){return e},getLength:function(t){return~~(o.length/2)},write:function(t){for(var r=o,e=0;e+1<r.length;){var n=(255&r[e])<<8|255&r[e+1];if(33088<=n&&n<=40956)n-=33088;else{if(!(57408<=n&&n<=60351))throw"illegal char at "+(e+1)+"/"+n;n-=49472}n=192*(n>>>8&255)+(255&n),t.put(n,13),e+=2}if(e<r.length)throw"illegal char at "+(e+1)}};return i},D=function(){var t=[],r={writeByte:function(r){t.push(255&r)},writeShort:function(t){r.writeByte(t),r.writeByte(t>>>8)},writeBytes:function(t,e,n){e=e||0,n=n||t.length;for(var o=0;o<n;o+=1)r.writeByte(t[o+e])},writeString:function(t){for(var e=0;e<t.length;e+=1)r.writeByte(t.charCodeAt(e))},toByteArray:function(){return t},toString:function(){var r="";r+="[";for(var e=0;e<t.length;e+=1)e>0&&(r+=","),r+=t[e];return r+="]"}};return r},S=function(t){var r=t,e=0,n=0,o=0,i={read:function(){for(;o<8;){if(e>=r.length){if(0==o)return-1;throw"unexpected end of file./"+o}var t=r.charAt(e);if(e+=1,"="==t)return o=0,-1;t.match(/^\s$/)||(n=n<<6|a(t.charCodeAt(0)),o+=6)}var i=n>>>o-8&255;return o-=8,i}},a=function(t){if(65<=t&&t<=90)return t-65;if(97<=t&&t<=122)return t-97+26;if(48<=t&&t<=57)return t-48+52;if(43==t)return 62;if(47==t)return 63;throw"c:"+t};return i},I=function(t,r,e){for(var n=function(t,r){var e=t,n=r,o=new Array(t*r),i={setPixel:function(t,r,n){o[r*e+t]=n},write:function(t){t.writeString("GIF87a"),t.writeShort(e),t.writeShort(n),t.writeByte(128),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(255),t.writeByte(255),t.writeByte(255),t.writeString(","),t.writeShort(0),t.writeShort(0),t.writeShort(e),t.writeShort(n),t.writeByte(0);var r=a(2);t.writeByte(2);for(var o=0;r.length-o>255;)t.writeByte(255),t.writeBytes(r,o,255),o+=255;t.writeByte(r.length-o),t.writeBytes(r,o,r.length-o),t.writeByte(0),t.writeString(";")}},a=function(t){for(var r=1<<t,e=1+(1<<t),n=t+1,i=u(),a=0;a<r;a+=1)i.add(String.fromCharCode(a));i.add(String.fromCharCode(r)),i.add(String.fromCharCode(e));var f,c,g,l=D(),h=(f=l,c=0,g=0,{write:function(t,r){if(t>>>r!=0)throw"length over";for(;c+r>=8;)f.writeByte(255&(t<<c|g)),r-=8-c,t>>>=8-c,g=0,c=0;g|=t<<c,c+=r},flush:function(){c>0&&f.writeByte(g)}});h.write(r,n);var s=0,v=String.fromCharCode(o[s]);for(s+=1;s<o.length;){var d=String.fromCharCode(o[s]);s+=1,i.contains(v+d)?v+=d:(h.write(i.indexOf(v),n),i.size()<4095&&(i.size()==1<<n&&(n+=1),i.add(v+d)),v=d)}return h.write(i.indexOf(v),n),h.write(e,n),h.flush(),l.toByteArray()},u=function(){var t={},r=0,e={add:function(n){if(e.contains(n))throw"dup key:"+n;t[n]=r,r+=1},size:function(){return r},indexOf:function(r){return t[r]},contains:function(r){return void 0!==t[r]}};return e};return i}(t,r),o=0;o<r;o+=1)for(var i=0;i<t;i+=1)n.setPixel(i,o,e(i,o));var a=D();n.write(a);for(var u=function(){var t=0,r=0,e=0,n="",o={},i=function(t){n+=String.fromCharCode(a(63&t))},a=function(t){if(t<0);else{if(t<26)return 65+t;if(t<52)return t-26+97;if(t<62)return t-52+48;if(62==t)return 43;if(63==t)return 47}throw"n:"+t};return o.writeByte=function(n){for(t=t<<8|255&n,r+=8,e+=1;r>=6;)i(t>>>r-6),r-=6},o.flush=function(){if(r>0&&(i(t<<6-r),t=0,r=0),e%3!=0)for(var o=3-e%3,a=0;a<o;a+=1)n+="="},o.toString=function(){return n},o}(),f=a.toByteArray(),c=0;c<f.length;c+=1)u.writeByte(f[c]);return u.flush(),"data:image/gif;base64,"+u};return t}();qrcode.stringToBytesFuncs["UTF-8"]=function(t){return function(t){for(var r=[],e=0;e<t.length;e++){var n=t.charCodeAt(e);n<128?r.push(n):n<2048?r.push(192|n>>6,128|63&n):n<55296||n>=57344?r.push(224|n>>12,128|n>>6&63,128|63&n):(e++,n=65536+((1023&n)<<10|1023&t.charCodeAt(e)),r.push(240|n>>18,128|n>>12&63,128|n>>6&63,128|63&n))}return r}(t)};
+</script>
+<script>
+/* ---- 09-boot.js ---- */
+"use strict";
+/* ---------------- boot ----------------
+   Lives in its own file (and so its own <script>, loaded last) because
+   build.mjs gives each source file a separate <script> tag: a function
+   declared in 06 doesn't exist yet while 05's top level runs. */
 (async function init() {
   loadLocal();
   await restoreHandle();
@@ -3118,9 +3706,14 @@ function bind() {
   setInterval(() => { if (!$('#viewDay').hidden && cur === todayStr()) renderDay(); }, 30000);
   /* midnight rollover: seal yesterday, then refresh everything */
   setInterval(() => { if (sealPastDays()) renderAll(); refreshStreak(); renderRail(); renderAgenda(); }, 60000);
+  startCloud();
+  /* installable app (PWA) — only over http(s); file:// just runs as a page */
+  if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) {
+    navigator.serviceWorker.register('sw.js').catch(e => console.warn('sw', e));
+  }
   if (!localStorage.getItem('baron.seen')) {
     try { localStorage.setItem('baron.seen', '1'); } catch (e) {}
-    setTimeout(openHelp, 500);
+    if (!cloud.cfg) setTimeout(openHelp, 500);
   } else if (fsStatus === 'need') {
     setTimeout(() => toast('Open ☰ to resume auto-saving to your file'), 700);
   }

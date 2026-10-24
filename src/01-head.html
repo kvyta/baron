@@ -2,7 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#08201d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Baron">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <title>Baron</title>
 <style>
 /* ===================== fonts =====================
@@ -527,6 +535,91 @@ textarea.inp{resize:vertical;min-height:56px;font-weight:500}
   .bar .nm{width:110px;flex:0 0 110px}
   .grades{gap:5px}
   .gcard .g{font-size:26px}
+}
+
+/* ============ cloud sync dot ============ */
+.logo{position:relative}
+.clouddot{position:absolute;top:7px;right:8px;width:11px;height:11px;border-radius:50%;border:2px solid var(--ink);background:#6b7780}
+.clouddot[hidden]{display:none}
+.clouddot[data-s="idle"]{background:var(--green)}
+.clouddot[data-s="syncing"]{background:var(--gold);animation:cdpulse 1s ease-in-out infinite}
+.clouddot[data-s="offline"]{background:#8fa0a8}
+.clouddot[data-s="error"]{background:var(--mult)}
+@keyframes cdpulse{50%{opacity:.35}}
+
+/* ============ phone bar + drawer (hidden on bigger screens) ============ */
+.mbar,.railshade{display:none}
+
+@media (max-width:700px){
+  body{overflow:hidden;font-size:14px}
+  #app{flex-direction:column;height:100vh;height:100dvh;min-height:0;padding:8px 8px calc(8px + env(safe-area-inset-bottom));gap:8px}
+  .mbar{display:flex;align-items:center;gap:6px;flex:0 0 auto;background:var(--panel);border:3px solid var(--ink);border-radius:12px;padding:5px 6px;box-shadow:0 4px 0 rgba(0,0,0,.45);position:relative;cursor:pointer;margin-top:env(safe-area-inset-top)}
+  .mlogo{font-family:var(--f-disp);font-size:20px;width:34px;height:34px;display:grid;place-items:center;background:linear-gradient(#e33c33,#b8241d);border:2px solid var(--ink);border-radius:9px;flex:0 0 auto}
+  .mst{flex:1;min-width:0;text-align:center;line-height:1.05}
+  .mst span{display:block;font-size:8px;font-weight:900;letter-spacing:1.3px;opacity:.6}
+  .mst b{font-family:var(--f-disp);font-weight:400;font-size:19px}
+  .mbar .clouddot{position:static;flex:0 0 auto}
+  .mbar .btn.icon{width:34px;height:32px}
+  /* the rail becomes a drawer */
+  .rail{position:fixed;left:0;top:0;bottom:0;z-index:55;width:min(300px,86vw);flex:none;padding:12px 10px calc(12px + env(safe-area-inset-bottom));
+    background:var(--bg0);border-right:3px solid var(--ink);box-shadow:6px 0 24px rgba(0,0,0,.6);transform:translateX(-105%);transition:transform .2s ease;overflow-y:auto}
+  body.railopen .rail{transform:none}
+  body.railopen .railshade{display:block;position:fixed;inset:0;z-index:54;background:rgba(3,10,9,.6)}
+  .railbtns{grid-template-columns:1fr}
+  /* tabs scroll sideways rather than wrap */
+  .tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:5px;margin-bottom:-5px;gap:5px}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{font-size:14px;padding:6px 10px 7px;flex:0 0 auto}
+  .tabs .spacer{display:none}
+  #btnHelp,#btnSound,#btnMenu{display:none}
+  .main{gap:7px;min-height:0;flex:1}
+  .view{gap:7px}
+  .toolbar{gap:5px}
+  .toolbar .datenav{flex:1 1 100%;width:auto!important}
+  .btn.sm{font-size:12.5px;padding:5px 8px 6px}
+  .gridwrap,.listwrap,.tkwrap{height:auto;flex:1;min-height:0}
+  .gridwrap{padding:6px 6px 18px}
+  .grid{grid-template-columns:44px 1fr}
+  .nowline,.edge{left:44px}
+  .nowline b{left:-44px;font-size:10px}
+  .edge b{left:-44px;font-size:10px}
+  .tl{font-size:11px;padding-right:6px}
+  .cell:hover{background:none;box-shadow:none}
+  .cell:hover::after{content:none}
+  .blk:hover{transform:none;box-shadow:0 3px 0 rgba(0,0,0,.5)}
+  .rz{height:16px}
+  .daybody{flex-direction:column}
+  .dayinfo{display:none}
+  .listwrap{padding:9px}
+  /* calendar: compact cells */
+  .calwrap{padding:6px}
+  .calgrid,.dow{gap:3px}
+  .day{min-height:62px;padding:3px 3px 6px;border-width:2px;border-radius:7px;gap:2px}
+  .day:hover{transform:none}
+  .day .n{font-size:13px}
+  .day .n em{font-size:9px}
+  .day .ev{font-size:8px;padding:0 2px;border-width:1px}
+  .day .more{font-size:8px}
+  .dow div{font-size:8px;letter-spacing:1px}
+  /* tasks */
+  .tkrow{flex-wrap:wrap;gap:6px;padding:7px 8px 7px 14px}
+  .tkrow .nmtxt{flex:1 1 100%;padding:2px 4px}
+  .tkrow .cnt{display:none}
+  .tkrow .hrs{margin-right:auto;text-align:left;min-width:0}
+  .tkadd{flex-wrap:wrap}
+  .tkadd .btn{flex:1 1 auto}
+  /* modals: full width, 16px inputs so iOS doesn't zoom */
+  .scrim{padding:8px;place-items:end center}
+  .modal{max-height:92dvh;padding:13px;border-radius:14px}
+  .modal h3{font-size:21px}
+  .inp,select.inp,textarea.inp{font-size:16px}
+  .grades{grid-template-columns:repeat(5,1fr);gap:5px}
+  .gcard{padding:9px 2px 7px}
+  .gcard .g{font-size:28px}
+  .gcard .l{font-size:8.5px}
+  .gcard:hover{transform:none}
+  .toast{bottom:calc(16px + env(safe-area-inset-bottom));max-width:92vw;text-align:center;font-size:14px}
+  .alert{left:8px;right:8px;width:auto}
 }
 
 </style>

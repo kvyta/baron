@@ -776,7 +776,7 @@ function renderStats() {
     '</svg>';
 
   /* hover crosshair + tooltip */
-  const svg = box.querySelector('svg'), tip = $('#ctip');
+  const svg = box.querySelector('svg'), tip = $('#ctip'), tipWrap = $('#chartbox');
   const cross = svg.querySelector('#cross'), crossd = svg.querySelector('#crossd');
   const move = e => {
     const r = svg.getBoundingClientRect();
@@ -787,11 +787,20 @@ function renderStats() {
     cross.setAttribute('x1', x(i)); cross.setAttribute('x2', x(i)); cross.setAttribute('opacity', '.55');
     crossd.setAttribute('cx', x(i)); crossd.setAttribute('cy', y(val(p))); crossd.setAttribute('opacity', '1');
     tip.hidden = false;
-    tip.style.left = (x(i) * r.width / W) + 'px';
-    tip.style.top = (y(val(p)) * r.height / H) + 'px';
     tip.innerHTML = '<b style="color:' + M.color + '">' + M.fmt(val(p)) + (statMetric === 'score' ? ' / 100' : statMetric === 'rank' ? ' / 10' : '') + '</b>' +
       '<span>' + prettyD(p.ds) + '  ·  ' + p.graded + '/' + p.total + ' graded  ·  ' + durLabel(p.slots) + '</span>' +
       '<span style="display:block;margin-top:2px">score ' + p.score + '  ·  rank ' + p.rank.toFixed(1) + '  ·  <b style="display:inline;font-family:inherit;font-size:inherit" class="goldtxt">' + p.gold.toLocaleString() + ' gold</b></span>';
+    const left = x(i) * r.width / W;
+    tip.style.left = left + 'px';
+    tip.style.top = (y(val(p)) * r.height / H) + 'px';
+    /* clamp so the tooltip (rendered nowrap, centered on `left`) never spills
+       past the chart box and forces a scrollbar on the stats panel */
+    const wrapRect = tipWrap.getBoundingClientRect(), tipRect = tip.getBoundingClientRect();
+    const margin = 6;
+    let dx = 0;
+    if (tipRect.left < wrapRect.left + margin) dx = (wrapRect.left + margin) - tipRect.left;
+    else if (tipRect.right > wrapRect.right - margin) dx = (wrapRect.right - margin) - tipRect.right;
+    if (dx) tip.style.left = (left + dx) + 'px';
   };
   svg.addEventListener('mousemove', move);
   svg.addEventListener('mouseleave', () => { tip.hidden = true; cross.setAttribute('opacity', '0'); crossd.setAttribute('opacity', '0'); });
@@ -887,6 +896,7 @@ function openMenu() {
         : '<div class="hint">Right now everything lives in this browser only. Link a real file and every change writes straight to your disk — survives restarts, cache clears, and you can put it in Dropbox/iCloud.</div>';
   openModal(
     '<h3>☰ MENU<button class="btn sm x" data-x>✕</button></h3>' +
+    '<div class="field"><label>CLOUD SYNC  ·  PHONE + COMPUTER</label>' + cloudMenuHtml() + '</div>' +
     '<div class="field"><label>SAVE TO DISK</label>' + fsLine +
     '<div class="modrow" style="margin-top:9px">' +
     (fsStatus === 'need' ? '<button class="btn green" data-grant>RESUME AUTO-SAVE</button>' : '') +
@@ -911,6 +921,8 @@ function openMenu() {
   );
   const M = $('#modal');
   M.querySelectorAll('[data-x]').forEach(b => b.onclick = closeModal);
+  bindCloudMenu(M);
+  if (!fsSupported()) { M.querySelector('[data-link]').hidden = true; M.querySelector('[data-open]').hidden = true; }
   M.querySelector('[data-link]').onclick = () => linkFile(false);
   M.querySelector('[data-open]').onclick = () => linkFile(true);
   const gr = M.querySelector('[data-grant]'); if (gr) gr.onclick = () => { grantHandle(); closeModal(); };
@@ -1097,6 +1109,11 @@ function bind() {
   });
   $('#agenda').addEventListener('click', e => { const r = e.target.closest('[data-ev]'); if (r) openEventEditor(r.dataset.ev, null, r.dataset.on); });
   $('#scrim').addEventListener('pointerdown', e => { if (e.target.id === 'scrim') closeModal(); });
+  /* phone: the rail is a drawer behind the score bar */
+  $('#mbar').onclick = e => { if (e.target.closest('#mMenu')) return; document.body.classList.toggle('railopen'); };
+  $('#mMenu').onclick = openMenu;
+  $('#railShade').onclick = () => document.body.classList.remove('railopen');
+  $('.rail').addEventListener('click', e => { if (e.target.closest('button, .agrow')) setTimeout(() => document.body.classList.remove('railopen'), 120); });
   bindGrid();
 
   document.addEventListener('keydown', e => {
@@ -1124,33 +1141,3 @@ function bind() {
 
   window.addEventListener('beforeunload', () => { try { localStorage.setItem(LS_KEY, snapshot()); } catch (e) {} });
 }
-
-/* ---------------- boot ---------------- */
-(async function init() {
-  loadLocal();
-  await restoreHandle();
-  sealPastDays(true);
-  /* one-time (per save) migration: materialize every event that was sitting
-     "unpulled" under the old manual-pull system into a real event-block, and
-     persist it immediately so this isn't just an in-memory patch that has to
-     be recomputed every boot. */
-  if (syncAllEventBlocks()) save();
-  refreshStreak();
-  cur = todayStr();
-  calM = new Date();
-  quotaAnchor = todayStr();
-  bind();
-  renderAll();
-  scrollToNow(false);
-  checkAlerts();
-  setInterval(checkAlerts, 30000);
-  setInterval(() => { if (!$('#viewDay').hidden && cur === todayStr()) renderDay(); }, 30000);
-  /* midnight rollover: seal yesterday, then refresh everything */
-  setInterval(() => { if (sealPastDays()) renderAll(); refreshStreak(); renderRail(); renderAgenda(); }, 60000);
-  if (!localStorage.getItem('baron.seen')) {
-    try { localStorage.setItem('baron.seen', '1'); } catch (e) {}
-    setTimeout(openHelp, 500);
-  } else if (fsStatus === 'need') {
-    setTimeout(() => toast('Open ☰ to resume auto-saving to your file'), 700);
-  }
-})();

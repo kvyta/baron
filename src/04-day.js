@@ -35,6 +35,9 @@ function renderRail() {
   $('#stGold').textContent = dayGold(d).toLocaleString();
   $('#stGold').parentNode.title = 'score ' + sc + ' × rank ' + rk.toFixed(1);
   $('#stStreak').textContent = computeStreak();
+  /* phone bar mirrors the rail's headline numbers */
+  $('#mScore').textContent = sc; $('#mRank').textContent = rk ? rk.toFixed(1) : '0';
+  $('#mGold').textContent = dayGold(d).toLocaleString(); $('#mStreak').textContent = computeStreak();
   const bd = bestDay();
   $('#stBest').textContent = bd.gold ? bd.gold.toLocaleString() : '0';
   $('#stBest').parentNode.title = bd.date ? 'best gold: ' + bd.gold + ' on ' + prettyD(bd.date) : 'best gold so far';
@@ -83,6 +86,7 @@ function renderDateNav() {
 function fitNavBar(el, tab, view) {
   if (!el || !tab || !view || view.hidden) return;
   el.style.width = '';
+  if (isPhone()) return;   // phone layout: the bar just takes the whole row
   const w = Math.round(tab.getBoundingClientRect().right - el.getBoundingClientRect().left);
   if (w > 140) el.style.width = w + 'px';
 }
@@ -90,6 +94,7 @@ function fitDateNav() { fitNavBar($('#viewDay .datenav'), $('.tab[data-view="wee
 function fitQuotaNav() { fitNavBar($('#quotaNav'), $('.tab[data-view="tasks"]'), $('#viewWeek')); }
 function fitMonthNav() { fitNavBar($('#monthNav'), $('.tab[data-view="tasks"]'), $('#viewCal')); }
 function fitAllNavBars() { fitDateNav(); fitQuotaNav(); fitMonthNav(); }
+const isPhone = () => window.matchMedia('(max-width:700px)').matches;
 
 /* ---------------- THE DAY ----------------
    Rows are no longer a uniform height: everything outside the day's working

@@ -2,8 +2,20 @@
 <div id="bg"></div>
 <div id="app">
 
+  <!-- phone only: headline numbers; tap to open the rail as a drawer -->
+  <div class="mbar" id="mbar">
+    <div class="mlogo outline">B</div>
+    <div class="mst"><span>SCORE</span><b id="mScore" style="color:var(--chip)">0</b></div>
+    <div class="mst"><span>RANK</span><b id="mRank" style="color:var(--mult)">0</b></div>
+    <div class="mst"><span>GOLD</span><b id="mGold" class="goldtxt">0</b></div>
+    <div class="mst"><span>STREAK</span><b id="mStreak" style="color:var(--orange)">0</b></div>
+    <i class="clouddot" data-s="off" hidden></i>
+    <button class="btn icon" id="mMenu" title="Menu">☰</button>
+  </div>
+  <div class="railshade" id="railShade"></div>
+
   <aside class="rail">
-    <div class="logo outline">BARON</div>
+    <div class="logo outline">BARON<i class="clouddot" id="cloudDot" data-s="off" hidden></i></div>
 
     <div class="panel" style="padding:9px">
       <div class="scorebox">
