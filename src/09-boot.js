@@ -14,8 +14,6 @@
   if (syncAllEventBlocks()) save();
   refreshStreak();
   cur = todayStr();
-  calM = new Date();
-  quotaAnchor = todayStr();
   bind();
   renderAll();
   scrollToNow(false);

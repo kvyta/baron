@@ -6,7 +6,6 @@ function renderAll() {
   syncEventsOn(cur);
   renderRail(); renderDateNav(); renderAgenda();
   if (!$('#viewDay').hidden) renderDay();
-  else if (!$('#viewWeek').hidden) renderQuotasList();
   else if (!$('#viewCal').hidden) renderCal();
   else if (!$('#viewTasks').hidden) renderTasks();
   else renderStats();
@@ -87,10 +86,8 @@ function fitNavBar(el, tab, view) {
   const w = Math.round(tab.getBoundingClientRect().right - el.getBoundingClientRect().left);
   if (w > 140) el.style.width = w + 'px';
 }
-function fitDateNav() { fitNavBar($('#viewDay .datenav'), $('.tab[data-view="week"]'), $('#viewDay')); }
-function fitQuotaNav() { fitNavBar($('#quotaNav'), $('.tab[data-view="tasks"]'), $('#viewWeek')); }
-function fitMonthNav() { fitNavBar($('#monthNav'), $('.tab[data-view="tasks"]'), $('#viewCal')); }
-function fitAllNavBars() { fitDateNav(); fitQuotaNav(); fitMonthNav(); }
+function fitDateNav() { fitNavBar($('#viewDay .datenav'), $('.tab[data-view="cal"]'), $('#viewDay')); }
+function fitAllNavBars() { fitDateNav(); }
 const isPhone = () => window.matchMedia('(max-width:700px)').matches;
 
 /* ---------------- THE DAY ----------------

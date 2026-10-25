@@ -1,48 +1,119 @@
 "use strict";
-/* ---------------- QUOTAS ----------------
-   A flat list over a 7-day sliding window anchored at `quotaAnchor` (default:
-   today), one horizontal separator per day. `‹`/`›` shift the window ±7 days;
-   THIS WEEK resets it back to today..today+6. A quota is a homework/milestone
-   checklist item pinned to one date — never a Task, never instantiated into a
-   block. This tab used to be called WEEKLY and show a 7-day grid with a
-   DEADLINES/QUOTAS selector; that grid and the old per-task-per-day quota
-   feature are gone for good — see CONTEXT.md §8/§13 for the history. What was
-   called a "deadline" is what this tab now calls a quota. */
-function quotaDays() { return Array.from({ length: 7 }, (_, i) => shiftD(quotaAnchor, i)); }
-function renderQuotasList() {
-  const t = todayStr();
-  const days = quotaDays();
-  $('#qLabel').textContent = quotaRangeLabel(days);
-  const wrap = $('#quotaList'); wrap.innerHTML = '';
-  days.forEach(ds => {
-    const sep = div('qsep');
-    sep.dataset.d = ds;
-    const label = ds === t ? 'TODAY' : ds === shiftD(t, 1) ? 'TOMORROW' : prettyD(ds);
-    sep.innerHTML = '<span class="ln"></span><span class="lbl">' + label + '</span><span class="ln"></span><span class="plus">+</span>';
-    wrap.appendChild(sep);
-    quotasOn(ds).forEach(it => {
-      const row = div('qrow' + (it.done ? ' done' : ''));
-      row.dataset.id = it.id;
-      row.innerHTML = '<span class="tx">' + esc(it.text) + '</span>';
-      wrap.appendChild(row);
-    });
-  });
+/* ---------------- CALENDAR (events + quotas) ----------------
+   One scrolling calendar, week rows from the past into the future, that
+   grows another CAL_CHUNK weeks whenever you scroll near either end — no
+   month selector. EVENTS | QUOTAS picks what the day cards show: events
+   (with times), or the quotas due that day (a quota has a due date, never a
+   time). The QUOTAS tab this replaces is gone; quotas still also show in the
+   rail's own today/tomorrow list. Nothing here writes to S.days: it reads
+   eventsOn(ds) directly instead of materializing event blocks, so scrolling
+   far ahead doesn't fill the save with empty future days. */
+let calMode = 'events';               // 'events' | 'quotas'
+let calFrom = null, calTo = null;     // Sunday of the first / last week drawn
+let calScrolled = false;              // scrolled to today yet this visit?
+const CAL_CHUNK = 8;
+function calInitRange() { const sun = sundayOf(todayStr()); calFrom = shiftD(sun, -7 * 8); calTo = shiftD(sun, 7 * 20); }
+function renderCal() {
+  if (!calFrom) calInitRange();
+  $$('#calModeSeg .seg').forEach(x => x.classList.toggle('on', x.dataset.cm === calMode));
+  $('#btnCalAdd').textContent = calMode === 'events' ? '+ EVENT' : '+ QUOTA';
+  const g = $('#calgrid'), f = document.createDocumentFragment();
+  const t = todayStr(), max = calMode === 'events' ? 5 : 6;
+  for (let w = calFrom; w <= calTo; w = shiftD(w, 7)) {
+    /* a month's title row goes above the week holding its 1st (and above the very first week drawn) */
+    let title = null;
+    for (let k = 0; k < 7; k++) { const dt = parseD(shiftD(w, k)); if (dt.getDate() === 1) title = dt; }
+    if (!title && w === calFrom) title = parseD(w);
+    if (title) f.appendChild(div('calmon outline', MON[title.getMonth()].toUpperCase() + ' ' + title.getFullYear()));
+    for (let k = 0; k < 7; k++) {
+      const ds = shiftD(w, k), dt = parseD(ds);
+      const d = dayOf(ds), qs = quotasOn(ds), doneQ = qs.filter(x => x.done).length;
+      const cell = div('day' + (ds < t ? ' past' : '') + (ds === t ? ' today' : '') + (ds === cur ? ' sel' : '') + (dt.getMonth() % 2 ? ' alt' : ''));
+      cell.dataset.d = ds;
+      cell.title = durLabel(bookedSlots(d)) + ' of a ' + durLabel(windowSlots(d)) + ' day  ·  rank ' + dayRank(d).toFixed(1) + ' / 10' +
+        (qs.length ? '  ·  ' + doneQ + '/' + qs.length + ' quotas done' : '');
+      const n = div('n');
+      const scv = gradedSlots(d) ? dayScore(d) : null;
+      n.innerHTML = '<span>' + (dt.getDate() === 1 ? MON[dt.getMonth()].slice(0, 3).toUpperCase() + ' ' : '') + dt.getDate() + '</span>' +
+        (scv != null ? '<em>' + scv + '</em>' : '');
+      cell.appendChild(n);
+      if (calMode === 'events') {
+        const ordered = calOrder(eventsOn(ds));
+        ordered.slice(0, max).forEach(ev => {
+          const e = div('ev');
+          e.innerHTML = '<span class="tm">' + minLabel(ev.s) + ' </span>' + esc(ev.title);   // phones hide the time — the title matters more
+          e.style.background = isRepeating(ev) ? C_EVENT : C_ONEOFF;
+          e.dataset.ev = ev.id;
+          cell.appendChild(e);
+        });
+        if (ordered.length > max) cell.appendChild(div('more', '+' + (ordered.length - max) + ' more'));
+      } else {
+        qs.slice(0, max).forEach(q => {
+          const e = div('cq' + (q.done ? ' done' : ''), q.text);
+          e.dataset.q = q.id;
+          cell.appendChild(e);
+        });
+        if (qs.length > max) cell.appendChild(div('more', '+' + (qs.length - max) + ' more'));
+      }
+      if (scv != null && scv >= 80) { const wn = div('won', '♠'); wn.style.color = '#ffc93d'; cell.appendChild(wn); }
+      /* bottom bar = quota completion for the day (empty track: none due) */
+      const fill = div('fill'); const fi = document.createElement('i');
+      fi.style.width = (qs.length ? Math.max(doneQ / qs.length * 100, 8) : 0) + '%';
+      fi.style.background = (qs.length && doneQ === qs.length) ? 'var(--green)' : 'var(--chip)';
+      fill.appendChild(fi); cell.appendChild(fill);
+      f.appendChild(cell);
+    }
+  }
+  g.innerHTML = ''; g.appendChild(f);
+  if (!calScrolled) { calScrolled = true; requestAnimationFrame(() => scrollCalTo(t, false)); }
+}
+/* bring a day's week near the top of the scroller */
+function scrollCalTo(ds, smooth) {
+  const w = $('#calwrap'), c = $('#calgrid [data-d="' + ds + '"]');
+  if (!w || !c) return;
+  const top = c.getBoundingClientRect().top - w.getBoundingClientRect().top + w.scrollTop - 46;
+  w.scrollTo({ top: Math.max(0, top), behavior: smooth ? 'smooth' : 'auto' });
+}
+/* reaching either end draws CAL_CHUNK more weeks there; growing the top
+   keeps what you were looking at in place */
+function calOnScroll() {
+  const w = $('#calwrap');
+  if (w.scrollTop < 240) {
+    const h = w.scrollHeight;
+    calFrom = shiftD(calFrom, -7 * CAL_CHUNK); renderCal();
+    w.scrollTop += w.scrollHeight - h;
+  } else if (w.scrollTop + w.clientHeight > w.scrollHeight - 240) {
+    calTo = shiftD(calTo, 7 * CAL_CHUNK); renderCal();
+  }
+}
+function setCalMode(m) { calMode = m; renderCal(); sfx('click'); }
+function refreshQuotaViews() { renderRailQuotas(); if (!$('#viewCal').hidden) renderCal(); }
+
+/* a day's quotas (QUOTAS mode, clicking a day card) */
+function openQuotaDay(ds) {
+  const qs = quotasOn(ds);
+  openModal(
+    '<h3>' + esc(prettyD(ds)) + '<button class="btn sm x" data-x>✕</button></h3>' +
+    '<div class="field"><label>QUOTAS DUE</label><div class="tlist" id="qdList">' +
+    (qs.length ? qs.map(q => '<div class="qrow' + (q.done ? ' done' : '') + '" data-id="' + q.id + '"><span class="tx">' + esc(q.text) + '</span></div>').join('')
+      : '<div class="hint">Nothing due this day.</div>') +
+    '</div></div>' +
+    '<div class="modrow"><button class="btn sm gold" data-add>+ QUOTA</button><div class="spacer"></div><button class="btn" data-x>CLOSE</button></div>'
+  );
+  const M = $('#modal');
+  M.querySelectorAll('[data-x]').forEach(b => b.onclick = closeModal);
+  M.querySelector('[data-add]').onclick = () => openNewQuota(ds);
+  M.querySelector('#qdList').addEventListener('click', e => { const r = e.target.closest('[data-id]'); if (r) openQuotaEditor(r.dataset.id); });
 }
 
-/* naming a new quota — a minimal prompt, not the full editor. Called with a
-   fixed date from clicking a day's separator, or with no date (the +QUOTA
-   toolbar button) in which case a day picker is shown, defaulting to the
-   first day of the window currently on screen. */
+/* naming a new quota. With a day (clicked from a card) the day is fixed;
+   from the + QUOTA button you pick the due date. */
 function openNewQuota(ds) {
-  const t = todayStr();
-  const days = ds ? null : quotaDays();
-  const dayLabel = d => d === t ? 'TODAY' : d === shiftD(t, 1) ? 'TOMORROW' : prettyD(d);
   openModal(
     '<h3>NEW QUOTA<button class="btn sm x" data-x>✕</button></h3>' +
     (ds
-      ? '<div class="field"><label>' + esc(prettyD(ds)) + '</label></div>'
-      : '<div class="field"><label>DAY</label><select class="inp" id="qDay">' +
-        days.map(d => '<option value="' + d + '">' + dayLabel(d) + '</option>').join('') + '</select></div>') +
+      ? '<div class="field"><label>DUE ' + esc(prettyD(ds)) + '</label></div>'
+      : '<div class="field"><label>DUE DATE</label><input class="inp" type="date" id="qDay" value="' + todayStr() + '"></div>') +
     '<div class="field"><label>QUOTA</label><input class="inp" id="qName" data-autofocus placeholder="e.g. Problem set 4 due"></div>' +
     '<div class="modrow"><div class="spacer"></div><button class="btn green" data-add>ADD</button></div>'
   );
@@ -51,21 +122,22 @@ function openNewQuota(ds) {
   const commit = () => {
     const el = M.querySelector('#qName'), v = el.value.trim();
     if (!v) { el.focus(); return; }
-    const day = ds || M.querySelector('#qDay').value;
+    const day = ds || M.querySelector('#qDay').value || todayStr();
     pushUndo(); addQuota(day, v); save(); closeModal();
-    renderQuotasList(); renderRailQuotas();
+    refreshQuotaViews();
     sfx('place');
   };
   M.querySelector('[data-add]').onclick = commit;
   M.querySelector('#qName').addEventListener('keydown', e => { if (e.key === 'Enter') commit(); });
 }
 
-/* the full editor for an EXISTING quota: rename, note, complete/uncomplete, delete */
+/* the full editor for an EXISTING quota: rename, due date, note, complete/uncomplete, delete */
 function openQuotaEditor(id) {
   const it = S.quotas.find(x => x.id === id); if (!it) return;
   openModal(
-    '<h3>' + esc(prettyD(it.date)) + '<button class="btn sm x" data-x>✕</button></h3>' +
+    '<h3>QUOTA<button class="btn sm x" data-x>✕</button></h3>' +
     '<div class="field"><label>QUOTA</label><input class="inp" id="qT" data-autofocus value="' + esc(it.text) + '"></div>' +
+    '<div class="field"><label>DUE DATE</label><input class="inp" type="date" id="qD" value="' + it.date + '"></div>' +
     '<div class="field"><label>NOTE</label><textarea class="inp" id="qN" placeholder="details…">' + esc(it.note || '') + '</textarea></div>' +
     '<div class="modrow"><button class="btn red" data-del title="delete">🗑</button><div class="spacer"></div>' +
     '<button class="btn ' + (it.done ? '' : 'green') + '" data-toggle>' + (it.done ? 'UNCOMPLETE' : 'COMPLETE') + '</button></div>'
@@ -74,56 +146,14 @@ function openQuotaEditor(id) {
   const commitEdits = () => {
     const v = M.querySelector('#qT').value.trim();
     if (v) it.text = v;
+    const dd = M.querySelector('#qD').value; if (dd) it.date = dd;
     it.note = M.querySelector('#qN').value;
   };
-  const refresh = () => { renderQuotasList(); renderRailQuotas(); };
-  M.querySelector('[data-x]').onclick = () => { pushUndo(); commitEdits(); save(); closeModal(); refresh(); };
-  M.querySelector('[data-del]').onclick = () => { pushUndo(); deleteQuota(it.id); save(); closeModal(); refresh(); sfx('back'); };
+  M.querySelector('[data-x]').onclick = () => { pushUndo(); commitEdits(); save(); closeModal(); refreshQuotaViews(); };
+  M.querySelector('[data-del]').onclick = () => { pushUndo(); deleteQuota(it.id); save(); closeModal(); refreshQuotaViews(); sfx('back'); };
   M.querySelector('[data-toggle]').onclick = () => {
-    pushUndo(); commitEdits(); toggleQuota(it.id); save(); closeModal(); refresh(); sfx(it.done ? 'score' : 'back');
+    pushUndo(); commitEdits(); toggleQuota(it.id); save(); closeModal(); refreshQuotaViews(); sfx(it.done ? 'score' : 'back');
   };
-}
-
-/* ---------------- CALENDAR ---------------- */
-function renderCal() {
-  $('#mLabel').textContent = MON[calM.getMonth()].toUpperCase() + ' ' + calM.getFullYear();
-  const g = $('#calgrid'); g.innerHTML = '';
-  const first = new Date(calM.getFullYear(), calM.getMonth(), 1);
-  const start = new Date(first); start.setDate(1 - first.getDay());
-  const t = todayStr();
-  for (let i = 0; i < 42; i++) {
-    const dt = new Date(start); dt.setDate(start.getDate() + i);
-    const ds = fmtD(dt);
-    syncEventsOn(ds);
-    const d = dayOf(ds), evs = eventsOn(ds);
-    const cell = div('day' + (dt.getMonth() !== calM.getMonth() ? ' out' : '') + (ds === t ? ' today' : '') + (ds === cur ? ' sel' : ''));
-    cell.dataset.d = ds;
-    const planned = d.blocks.reduce((a, b) => a + b.len, 0);
-    const qs = quotasOn(ds), doneQ = qs.filter(x => x.done).length;
-    cell.title = durLabel(bookedSlots(d)) + ' of a ' + durLabel(windowSlots(d)) + ' day  ·  rank ' + dayRank(d).toFixed(1) + ' / 10' +
-      (qs.length ? '  ·  ' + doneQ + '/' + qs.length + ' quotas done' : '');
-    const n = div('n');
-    const scv = gradedSlots(d) ? dayScore(d) : null;
-    n.innerHTML = '<span>' + dt.getDate() + '</span>' + (scv != null ? '<em>' + scv + '</em>' : (d.blocks.length ? '<em style="opacity:.45;color:#9fb0ad">' + d.blocks.length + ' blk</em>' : ''));
-    cell.appendChild(n);
-    const ordered = calOrder(evs);
-    ordered.slice(0, 3).forEach(ev => {
-      const e = div('ev', minLabel(ev.s) + ' ' + ev.title);
-      e.style.background = isRepeating(ev) ? C_EVENT : C_ONEOFF;
-      cell.appendChild(e);
-    });
-    if (ordered.length > 3) cell.appendChild(div('more', '+' + (ordered.length - 3) + ' more'));
-    if (scv != null && scv >= 80) { const w = div('won', '♠'); w.style.color = '#ffc93d'; cell.appendChild(w); }
-    const fill = div('fill'); const fi = document.createElement('i');
-    /* this bar is QUOTA COMPLETION: fraction of that day's quotas marked done.
-       No quotas at all → empty track (just the neutral grey .fill shows).
-       Quotas exist but none done yet → a small visible sliver, so the day
-       still reads as "something is due here". Fully done → green. */
-    fi.style.width = (qs.length ? Math.max(doneQ / qs.length * 100, 8) : 0) + '%';
-    fi.style.background = (qs.length && doneQ === qs.length) ? 'var(--green)' : 'var(--chip)';
-    fill.appendChild(fi); cell.appendChild(fill);
-    g.appendChild(cell);
-  }
 }
 
 /* UPCOMING lives in the rail so it is visible from every tab. Just the one
@@ -403,8 +433,7 @@ function copyInto(srcDs, dstDs) {
    into `cur`, either merged around whatever is already booked (mode 'keep',
    the default — same free-space-only carving copyInto uses) or after
    wiping cur's existing blocks first (mode 'wipe' — events included in the
-   wipe, since syncEventsOn/renderAll rebuild them fresh regardless, same as
-   ☰ Menu's CLEAR EVERY BLOCK). */
+   wipe, since syncEventsOn/renderAll rebuild them fresh regardless). */
 function autofillDay(srcDs, dstDs, wipe) {
   if (isPastDay(dstDs)) { toast('Past days are archived'); return; }
   if (!taskBlocks(dayOf(srcDs)).length) { toast('Nothing to copy from ' + prettyD(srcDs)); return; }
@@ -901,11 +930,9 @@ function openMenu() {
     (typeof Notification !== 'undefined' && Notification.permission === 'default'
       ? '<div class="modrow" style="margin-top:9px"><button class="btn sm green" data-notify>ENABLE DESKTOP ALERTS</button></div>' : '') +
     '</div>' +
-    '<div class="field"><label>THIS DAY  ·  ' + prettyD(cur) + '</label><div class="modrow" style="margin-top:0">' +
-    '<button class="btn sm red" data-clear>CLEAR EVERY BLOCK</button></div></div>' +
     '<div class="field"><label>ALL TIME</label><div class="li"><span>Days with something graded</span><span class="amt">' + Object.keys(S.days).filter(k => hasActivity(k)).length + '</span></div>' +
     '<div class="li" style="margin-top:6px"><span class="goldtxt">Best gold</span><span class="amt">' + (bestDay().gold || '—') + '</span></div></div>' +
-    '<div class="modrow"><button class="btn sm red" data-reset>RESET EVERYTHING</button><div class="spacer"></div><button class="btn gold" data-x>DONE</button></div>'
+    '<div class="modrow"><div class="spacer"></div><button class="btn gold" data-x>DONE</button></div>'
   );
   const M = $('#modal');
   M.querySelectorAll('[data-x]').forEach(b => b.onclick = closeModal);
@@ -913,19 +940,6 @@ function openMenu() {
   bindLocalMenu(M);
   const nb = M.querySelector('[data-notify]');
   if (nb) nb.onclick = () => { askNotify(); closeModal(); };
-  M.querySelector('[data-clear]').onclick = () => {
-    if (isPastDay(cur)) { toast('Past days are archived'); return; }
-    const d = getDay(cur);
-    if (!d.blocks.length) { toast('That day is already empty'); return; }
-    pushUndo(); d.blocks = [];
-    save(); closeModal(); renderAll(); sfx('back'); toast('Day cleared — Ctrl+Z undoes it');
-  };
-  let armed = false;
-  const rb = M.querySelector('[data-reset]');
-  rb.onclick = () => {
-    if (!armed) { armed = true; rb.textContent = 'REALLY? CLICK AGAIN'; setTimeout(() => { armed = false; rb.textContent = 'RESET EVERYTHING'; }, 3500); return; }
-    pushUndo(); S = BLANK(); cur = todayStr(); save(); closeModal(); renderAll(); toast('Wiped clean');
-  };
 }
 function openHelp() {
   const rows = [
@@ -937,7 +951,7 @@ function openHelp() {
     ['1 – 5 in the grade card', 'pick a grade'],
     ['TODAY button', 'jump back to today'],
     ['past days', 'read-only archive'],
-    ['B', 'new block'], ['N', 'jump to now'], ['T / Q / K / C', 'daily / quotas / tasks / calendar'], ['S', 'recap today (→ SEE ALL STATS)'],
+    ['B', 'new block'], ['N', 'jump to now'], ['T / C / K', 'daily / calendar / tasks'], ['Q', 'calendar, showing quotas'], ['S', 'recap today (→ SEE ALL STATS)'],
     ['← →', 'previous / next day'], ['Ctrl+Z', 'undo'], ['Esc', 'close']
   ];
   openModal(
@@ -1028,9 +1042,10 @@ function checkAlerts() {
 }
 
 /* ---------------- view switching ---------------- */
+let calScrollT = null;
 function switchView(v) {
+  if (v === 'cal' && $('#viewCal').hidden) calScrolled = false;   // each visit opens on this week
   $('#viewDay').hidden = v !== 'day';
-  $('#viewWeek').hidden = v !== 'week';
   $('#viewCal').hidden = v !== 'cal';
   $('#viewTasks').hidden = v !== 'tasks';
   $('#viewStats').hidden = v !== 'stats';
@@ -1070,24 +1085,21 @@ function bind() {
   $('#btnHelp').onclick = openHelp;
   $('#btnMenu').onclick = openMenu;
   $('#btnSound').onclick = () => { S.settings.sound = !S.settings.sound; save(); renderRail(); if (S.settings.sound) sfx('score'); };
-  $('#mPrev').onclick = () => { calM = new Date(calM.getFullYear(), calM.getMonth() - 1, 1); renderCal(); sfx('click'); };
-  $('#mNext').onclick = () => { calM = new Date(calM.getFullYear(), calM.getMonth() + 1, 1); renderCal(); sfx('click'); };
-  $('#btnMToday').onclick = () => { calM = new Date(); renderCal(); };
-  $('#btnNewEvt').onclick = () => openEventEditor(null, cur);
-  $('#calgrid').addEventListener('click', e => { const c = e.target.closest('[data-d]'); if (c) openDayPanel(c.dataset.d); });
-
-  $('#qPrev').onclick = () => { quotaAnchor = shiftD(quotaAnchor, -7); renderQuotasList(); fitQuotaNav(); sfx('click'); };
-  $('#qNext').onclick = () => { quotaAnchor = shiftD(quotaAnchor, 7); renderQuotasList(); fitQuotaNav(); sfx('click'); };
-  $('#btnQThis').onclick = () => { quotaAnchor = todayStr(); renderQuotasList(); fitQuotaNav(); sfx('click'); };
-  $('#btnNewQuota').onclick = () => openNewQuota();
-  $('#quotaList').addEventListener('click', e => {
-    const sep = e.target.closest('.qsep'); if (sep) { openNewQuota(sep.dataset.d); return; }
-    const row = e.target.closest('.qrow'); if (row) { openQuotaEditor(row.dataset.id); return; }
+  $$('#calModeSeg .seg').forEach(x => x.onclick = () => setCalMode(x.dataset.cm));
+  $('#btnCalAdd').onclick = () => { if (calMode === 'events') openEventEditor(null, cur); else openNewQuota(); };
+  $('#btnCalToday').onclick = () => { scrollCalTo(todayStr(), true); sfx('click'); };
+  $('#calwrap').addEventListener('scroll', () => { clearTimeout(calScrollT); calScrollT = setTimeout(calOnScroll, 60); });
+  $('#calgrid').addEventListener('click', e => {
+    const ev = e.target.closest('[data-ev]'), q = e.target.closest('[data-q]'), c = e.target.closest('[data-d]');
+    if (ev && c) { openEventEditor(ev.dataset.ev, null, c.dataset.d); return; }
+    if (q) { openQuotaEditor(q.dataset.q); return; }
+    if (c) { if (calMode === 'events') openDayPanel(c.dataset.d); else openQuotaDay(c.dataset.d); }
   });
+
   $('#railQuotas').addEventListener('click', e => {
     const row = e.target.closest('.qrow'); if (!row) return;
     pushUndo(); toggleQuota(row.dataset.id); save();
-    renderRailQuotas(); if (!$('#viewWeek').hidden) renderQuotasList();
+    refreshQuotaViews();
     sfx('tick');
   });
   $('#agenda').addEventListener('click', e => { const r = e.target.closest('[data-ev]'); if (r) openEventEditor(r.dataset.ev, null, r.dataset.on); });
@@ -1111,8 +1123,8 @@ function bind() {
     if (!$('#scrim').hidden) return;
     const k = e.key.toLowerCase();
     if (k === 't') switchView('day');
-    else if (k === 'q') switchView('week');
-    else if (k === 'c') switchView('cal');
+    else if (k === 'q') { calMode = 'quotas'; switchView('cal'); }
+    else if (k === 'c') { calMode = 'events'; switchView('cal'); }
     else if (k === 's') showRecap();
     else if (k === 'k') switchView('tasks');
     else if (k === 'n') { goDay(todayStr()); scrollToNow(true); }

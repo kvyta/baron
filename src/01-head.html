@@ -346,12 +346,20 @@ button{font-family:inherit}
 .dow div{text-align:center;font-size:10px;font-weight:900;letter-spacing:2px;opacity:.55}
 .calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
 .day{
-  min-height:104px;background:var(--panel);border:3px solid var(--ink);border-radius:10px;padding:5px 6px;
+  min-height:136px;background:var(--panel);border:3px solid var(--ink);border-radius:10px;padding:5px 6px;
   box-shadow:0 4px 0 rgba(0,0,0,.4), inset 0 2px 0 rgba(255,255,255,.07);cursor:pointer;position:relative;overflow:hidden;
   transition:transform .1s cubic-bezier(.2,1.6,.4,1);display:flex;flex-direction:column;gap:3px;
 }
 .day:hover{transform:translateY(-3px) rotate(-.4deg);z-index:3}
-.day.out{opacity:.32}
+.day.past{opacity:.62}
+.day.alt{background:#30373e}
+.calmon{grid-column:1/-1;font-family:var(--f-disp);font-size:17px;letter-spacing:.6px;padding:10px 4px 0;color:var(--white)}
+.calmon:first-child{padding-top:0}
+.dow{position:sticky;top:-10px;z-index:4;background:#0f1b19;margin:-10px -10px 6px;padding:8px 10px 6px;border-bottom:2px solid rgba(0,0,0,.4)}
+.day .cq{font-size:10px;font-weight:800;border-radius:5px;padding:2px 5px;border:2px solid rgba(0,0,0,.55);color:#fff;background:var(--purple);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.day .cq.done{background:var(--green);color:#08251a;text-decoration:line-through}
+.day .ev{cursor:pointer}
+.day .ev:hover,.day .cq:hover{filter:brightness(1.15)}
 .day.today{border-color:var(--gold);box-shadow:0 4px 0 rgba(0,0,0,.4),0 0 0 3px rgba(255,201,61,.35)}
 .day.sel{background:var(--panel3)}
 .day .n{font-family:var(--f-disp);font-size:17px;line-height:1;display:flex;justify-content:space-between;align-items:center}
@@ -551,7 +559,6 @@ textarea.inp{resize:vertical;min-height:56px;font-weight:500}
 .svdrop button:hover,.svdrop button:focus-visible{border-color:var(--gold);outline:none}
 .svdrop b{display:block;font-family:var(--f-disp);font-weight:400;font-size:13px}
 .svdrop small{display:block;font-size:10.5px;font-weight:700;opacity:.6;margin-top:1px}
-@media (max-width:520px){ .svrow{grid-template-columns:44px minmax(0,1fr)} .svb{grid-column:1/-1;justify-content:flex-start} }
 .gbtn b{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;background:#fff;color:#4285f4;font-family:var(--f-ui);font-weight:900;font-size:11px;margin-right:4px;vertical-align:-2px;border:1.5px solid var(--ink)}
 /* ============ cloud sync dot ============ */
 .logo{position:relative}
@@ -610,7 +617,11 @@ textarea.inp{resize:vertical;min-height:56px;font-weight:500}
   /* calendar: compact cells */
   .calwrap{padding:6px}
   .calgrid,.dow{gap:3px}
-  .day{min-height:62px;padding:3px 3px 6px;border-width:2px;border-radius:7px;gap:2px}
+  .day{min-height:96px;padding:3px 3px 6px;border-width:2px;border-radius:7px;gap:2px}
+  .day .cq{font-size:8px;padding:0 2px;border-width:1px}
+  .day .ev .tm{display:none}
+  .dow{top:-6px;margin:-6px -6px 4px;padding:6px 6px 4px}
+  .calmon{font-size:14px;padding-top:8px}
   .day:hover{transform:none}
   .day .n{font-size:13px}
   .day .n em{font-size:9px}

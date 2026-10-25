@@ -72,8 +72,6 @@ const BLANK = () => ({
 });
 let S = BLANK();
 let cur = todayStr();          // date shown in THE DAY
-let calM = new Date();         // month shown in CALENDAR
-let quotaAnchor = todayStr();  // first day of the 7-day window shown in QUOTAS
 let undoStack = [];
 
 const getDay = ds => (S.days[ds] || (S.days[ds] = { blocks: [] }));

@@ -52,9 +52,8 @@
   <main class="main">
     <nav class="tabs">
       <button class="tab on" data-view="day">DAILY</button>
-      <button class="tab" data-view="week">QUOTAS</button>
-      <button class="tab" data-view="tasks">TASKS</button>
       <button class="tab" data-view="cal">CALENDAR</button>
+      <button class="tab" data-view="tasks">TASKS</button>
       <button class="tab" data-view="stats" hidden>STATS</button>
       <div class="spacer"></div>
       <button class="btn icon" id="btnHelp" title="How it works">?</button>
@@ -86,34 +85,17 @@
       </div>
     </section>
 
-    <section class="view" id="viewWeek" hidden>
-      <div class="toolbar">
-        <div class="datenav" id="quotaNav">
-          <button class="navbtn" id="qPrev">‹</button>
-          <div class="d outline" id="qLabel">DATE – DATE</div>
-          <button class="navbtn" id="qNext">›</button>
-        </div>
-        <button class="btn sm gold" id="btnNewQuota">+ QUOTA</button>
-        <div class="spacer"></div>
-        <button class="btn sm" id="btnQThis">THIS WEEK</button>
-      </div>
-      <div class="listwrap">
-        <div class="list" id="quotaList"></div>
-      </div>
-    </section>
-
     <section class="view" id="viewCal" hidden>
-      <div class="calhead">
-        <div class="datenav" id="monthNav">
-          <button class="navbtn" id="mPrev">‹</button>
-          <div class="d outline" id="mLabel">MONTH</div>
-          <button class="navbtn" id="mNext">›</button>
+      <div class="toolbar">
+        <div class="segwrap" id="calModeSeg">
+          <button class="seg on" data-cm="events">EVENTS</button>
+          <button class="seg" data-cm="quotas">QUOTAS</button>
         </div>
-        <button class="btn sm gold" id="btnNewEvt">+ NEW EVENT</button>
+        <button class="btn sm gold" id="btnCalAdd">+ EVENT</button>
         <div class="spacer"></div>
-        <button class="btn sm" id="btnMToday">THIS MONTH</button>
+        <button class="btn sm" id="btnCalToday">TODAY</button>
       </div>
-      <div class="calwrap">
+      <div class="calwrap" id="calwrap">
         <div class="dow"><div>SUN</div><div>MON</div><div>TUE</div><div>WED</div><div>THU</div><div>FRI</div><div>SAT</div></div>
         <div class="calgrid" id="calgrid"></div>
       </div>

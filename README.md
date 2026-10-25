@@ -70,9 +70,12 @@ for hours that have already passed.
 or as a flat list of `start – end | task`. A block whose time has passed starts
 glowing until you grade it.
 
-**CALENDAR** — a month grid with each day's score, its events, and a bar showing
-how full the day was. One-off events are green and sort above recurring ones, so
-a real appointment doesn't hide behind a wall of weekly commitments.
+**CALENDAR** — one scrolling calendar, week after week, with each day's score.
+`EVENTS | QUOTAS` picks what the day cards show: events with their times
+(one-off events are green and sort above recurring ones), or the quotas due
+that day — a quota has a due date, never a time. `+ EVENT` / `+ QUOTA` follows
+the selector; click a card for that day, or a chip to edit it. The bar along
+each card's bottom is how many of that day's quotas are done.
 
 **TASKS** — the task list, filtered by `VISIBLE` or `ALL` and sorted A–Z or by
 total hours.
@@ -158,7 +161,7 @@ src/
   02-body.html      markup: rail, tabs, the four views
   03-core.js        state, save/load, tasks, events, scoring
   04-day.js         rail, timeline, list, block and event editors
-  05-views.js       quotas, calendar, tasks, stats, menu, alerts, wiring
+  05-views.js       calendar (events + quotas), tasks, stats, menu, alerts, wiring
   06-sync.js        cloud saving: Google / email sign-in, push/pull, 3-way merge
   07-local.js       LOCAL: keep a .json file in step with the cloud (priority merge)
   09-boot.js        boot
@@ -171,7 +174,7 @@ own `<script>` tag, so boot lives last, in `09`. That order lives in `build.mjs`
 
 ## Keyboard
 
-`T` `C` `K` `S` daily / calendar / tasks / stats · `V` timeline or list ·
+`T` `C` `K` daily / calendar / tasks · `Q` calendar showing quotas · `S` recap · `V` timeline or list ·
 `B` new block · `N` jump to now · `1`–`5` pick a grade · `Ctrl+Z` undo ·
 `Esc` close · `?` help
 
