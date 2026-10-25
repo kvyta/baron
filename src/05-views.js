@@ -394,7 +394,7 @@ function openDayPanel(ds) {
 }
 
 /* ---------------- copy blocks (CALENDAR's day panel + DAILY's AUTOFILL) ----------------
-   Shared by copyInto (CALENDAR) and autofillDay (DAILY): only TASK blocks
+   Used by copyInto (CALENDAR's day panel): only TASK blocks
    ever move (events are never touched — they're always re-derived by
    syncEventsOn, not something to copy) and only into currently-free time —
    an existing block in `dstDs`, or an event, always wins; the incoming block
@@ -428,64 +428,6 @@ function copyInto(srcDs, dstDs) {
   return n;
 }
 
-/* ---------------- AUTOFILL (DAILY toolbar) ----------------
-   Copies just the TASK blocks (never events, never quotas) from another day
-   into `cur`, either merged around whatever is already booked (mode 'keep',
-   the default — same free-space-only carving copyInto uses) or after
-   wiping cur's existing blocks first (mode 'wipe' — events included in the
-   wipe, since syncEventsOn/renderAll rebuild them fresh regardless). */
-function autofillDay(srcDs, dstDs, wipe) {
-  if (isPastDay(dstDs)) { toast('Past days are archived'); return; }
-  if (!taskBlocks(dayOf(srcDs)).length) { toast('Nothing to copy from ' + prettyD(srcDs)); return; }
-  pushUndo();
-  if (wipe) getDay(dstDs).blocks = [];
-  const n = mergeBlocksFreeSpace(srcDs, dstDs);
-  save(); closeModal(); renderAll(); sfx('place');
-  toast(n ? n + ' block' + (n === 1 ? '' : 's') + ' autofilled from ' + prettyD(srcDs) : 'No free space to autofill into');
-}
-
-function openAutofill() {
-  if (isPastDay(cur)) { toast('Past days are archived'); return; }
-  const yestDs = shiftD(cur, -1), lastWkDs = shiftD(cur, -7);
-  const label = cur === todayStr() ? 'TODAY' : prettyD(cur);
-  let src = null, mode = 'keep';
-  openModal(
-    '<h3>AUTOFILL ' + esc(label) + '<button class="btn sm x" data-x>✕</button></h3>' +
-    '<div class="field"><label>COPY BLOCKS FROM</label>' +
-    '<div class="modrow" style="flex-wrap:wrap;gap:7px;margin-top:2px">' +
-    '<button class="btn sm" data-src="yest">YESTERDAY<br><small style="font-weight:600;opacity:.7">' + esc(prettyD(yestDs)) + '</small></button>' +
-    '<button class="btn sm" data-src="lastweek">SAME DAY LAST WEEK<br><small style="font-weight:600;opacity:.7">' + esc(prettyD(lastWkDs)) + '</small></button>' +
-    '<button class="btn sm" data-src="pick">CHOOSE A DAY</button>' +
-    '</div>' +
-    '<input class="inp" type="date" id="afDate" value="' + yestDs + '" style="margin-top:8px" hidden></div>' +
-    '<div class="field"><label>IF ' + esc(label) + ' ALREADY HAS BLOCKS</label>' +
-    '<div class="modrow" style="flex-direction:column;gap:8px;align-items:stretch;margin-top:2px">' +
-    '<button class="btn gold" data-mode="keep">KEEP MINE — autofill only fills the empty time</button>' +
-    '<button class="btn" data-mode="wipe">DELETE MINE FIRST — autofill replaces everything</button>' +
-    '</div></div>' +
-    '<div class="modrow"><div class="spacer"></div><button class="btn green" data-go>AUTOFILL</button></div>'
-  );
-  const M = $('#modal');
-  M.querySelector('[data-x]').onclick = closeModal;
-  const srcBtns = M.querySelectorAll('[data-src]'), modeBtns = M.querySelectorAll('[data-mode]');
-  const dateInp = M.querySelector('#afDate');
-  srcBtns.forEach(b => b.onclick = () => {
-    src = b.dataset.src;
-    srcBtns.forEach(x => x.classList.toggle('gold', x === b));
-    dateInp.hidden = src !== 'pick';
-    if (src === 'pick') dateInp.focus();
-  });
-  modeBtns.forEach(b => b.onclick = () => {
-    mode = b.dataset.mode;
-    modeBtns.forEach(x => x.classList.toggle('gold', x === b));
-  });
-  M.querySelector('[data-go]').onclick = () => {
-    const srcDs = src === 'yest' ? yestDs : src === 'lastweek' ? lastWkDs : src === 'pick' ? dateInp.value : null;
-    if (!srcDs) { toast('Pick a day to copy from'); return; }
-    if (srcDs === cur) { toast('Pick a different day'); return; }
-    autofillDay(srcDs, cur, mode === 'wipe');
-  };
-}
 /* ---------------- day recap ---------------- */
 const FEEDBACK = [
   [95, 'Near-perfect use of the time you booked.'],
@@ -1070,7 +1012,6 @@ function bind() {
   $('#dNext').onclick = () => { goDay(shiftD(cur, 1)); sfx('click'); };
   $('#btnToday').onclick = () => { goDay(todayStr()); scrollToNow(true); sfx('click'); };
   $('#btnQuick').onclick = () => { const s = cur === todayStr() ? Math.floor(nowSlotFloat()) : 36; openBlockEditor(null, clamp(s, 0, 92), 4); };
-  $('#btnAutofill').onclick = openAutofill;
   $('#btnRecap').onclick = showRecap;
   $('#tkAdd').onclick = newTaskFromInput;
   $('#tkNew').addEventListener('keydown', e => { if (e.key === 'Enter') newTaskFromInput(); });

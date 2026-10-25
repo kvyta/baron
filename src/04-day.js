@@ -283,10 +283,33 @@ function preview(a, b) {
 }
 function killPreview() { const p = $('#pv'); if (p) p.remove(); }
 
+/* Touch (phones, tablets): the timeline belongs to scrolling. A finger only
+   acts on a TAP — down and up without moving — and then does what a mouse
+   click would: open the block, grade it, open the event, toggle SOD/EOD, or
+   add a 1-hour block on empty time. Dragging never paints or resizes; times
+   change in the block editor instead. The browser fires pointercancel the
+   moment it takes a drag over for scrolling, which drops the pending tap. */
+let tap = null;
+function tapAct(target) {
+  const edgeB = target.closest('.edge b[data-act="toggle"]');
+  if (edgeB) { toggleEdge(edgeB.closest('.edge').dataset.edge); return; }
+  const bEl = target.closest('.blk');
+  if (bEl) {
+    const bb = findBlock(cur, bEl.dataset.id);
+    if (bb && isEvent(bb)) { openTodayEvent(bb); return; }
+    if (target.dataset.act === 'tick') { openGrade(bEl.dataset.id); return; }
+    openBlockEditor(bEl.dataset.id); return;
+  }
+  if (isPastDay(cur)) return;
+  const cell = target.closest('.cell'); if (!cell) return;
+  const slot = +cell.dataset.slot;
+  openBlockEditor(null, slot, Math.min(4, SLOTS - slot));
+}
 function bindGrid() {
   const g = $('#grid');
   g.addEventListener('pointerdown', e => {
-    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (e.pointerType !== 'mouse') { tap = { id: e.pointerId, x: e.clientX, y: e.clientY, target: e.target }; return; }
+    if (e.button !== 0) return;
     const edgeB = e.target.closest('.edge b[data-act="toggle"]');
     if (edgeB) { e.preventDefault(); toggleEdge(edgeB.closest('.edge').dataset.edge); return; }
     const bEl = e.target.closest('.blk');
@@ -307,16 +330,21 @@ function bindGrid() {
     if (isPastDay(cur)) return;
     const cell = e.target.closest('.cell'); if (!cell) return;
     const slot = +cell.dataset.slot;
-    if (e.pointerType !== 'mouse') { openBlockEditor(null, slot, Math.min(4, SLOTS - slot)); return; }
     e.preventDefault();
     paint = { a: slot, b: slot }; g.setPointerCapture(e.pointerId);
     preview(slot, slot); sfx('tick');
   });
   g.addEventListener('pointermove', e => {
+    if (tap && e.pointerId === tap.id && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) > 10) tap = null;   // it's a drag: let it scroll
     if (paint) { const s = slotFromEvent(e); if (s !== paint.b) { paint.b = s; preview(paint.a, paint.b); sfx('tick', Math.abs(paint.b - paint.a)); } }
     else if (resizing) { const s = Math.max(resizing.start, slotFromEvent(e)); preview(resizing.start, s); resizing.cur = s; }
   });
   g.addEventListener('pointerup', e => {
+    if (tap && e.pointerId === tap.id) {
+      const t = tap; tap = null;
+      if (Math.hypot(e.clientX - t.x, e.clientY - t.y) <= 10) tapAct(t.target);
+      return;
+    }
     if (paint) {
       const s = Math.min(paint.a, paint.b), en = Math.max(paint.a, paint.b) + 1;
       paint = null; killPreview();
@@ -327,7 +355,7 @@ function bindGrid() {
       if (newLen !== r.len) commitResize(r.id, newLen); else renderDay();
     }
   });
-  g.addEventListener('pointercancel', () => { paint = null; resizing = null; killPreview(); });
+  g.addEventListener('pointercancel', () => { tap = null; paint = null; resizing = null; killPreview(); });
 }
 function commitResize(id, newLen) {
   const d = getDay(cur), b = d.blocks.find(x => x.id === id); if (!b) return;

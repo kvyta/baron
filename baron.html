@@ -251,6 +251,7 @@ button{font-family:inherit}
 .blk.now{animation:blkpulse 1.4s ease-in-out infinite}
 @keyframes blkpulse{0%,100%{box-shadow:0 3px 0 rgba(0,0,0,.5),0 0 0 0 rgba(255,201,61,.6)}50%{box-shadow:0 3px 0 rgba(0,0,0,.5),0 0 0 7px rgba(255,201,61,0)}}
 .rz{position:absolute;left:0;right:0;bottom:0;height:11px;cursor:ns-resize;z-index:9}
+@media (hover:none){ .rz{display:none} }   /* touch can't drag-resize — times change in the block editor */
 .rz::after{content:'';position:absolute;left:50%;bottom:2px;width:28px;height:3px;margin-left:-14px;border-radius:3px;background:rgba(0,0,0,.3);opacity:0}
 .blk:hover .rz::after{opacity:1}
 
@@ -346,7 +347,7 @@ button{font-family:inherit}
 .dow div{text-align:center;font-size:10px;font-weight:900;letter-spacing:2px;opacity:.55}
 .calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
 .day{
-  min-height:136px;background:var(--panel);border:3px solid var(--ink);border-radius:10px;padding:5px 6px;
+  aspect-ratio:1/2;min-height:0;background:var(--panel);border:3px solid var(--ink);border-radius:10px;padding:5px 6px;
   box-shadow:0 4px 0 rgba(0,0,0,.4), inset 0 2px 0 rgba(255,255,255,.07);cursor:pointer;position:relative;overflow:hidden;
   transition:transform .1s cubic-bezier(.2,1.6,.4,1);display:flex;flex-direction:column;gap:3px;
 }
@@ -421,7 +422,20 @@ button{font-family:inherit}
 select.inp{cursor:pointer}
 textarea.inp{resize:vertical;min-height:56px;font-weight:500}
 .ro{background:#171b20;color:#c9d3d8;border-style:dashed;cursor:default}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+/* Nothing in a modal may be wider than the modal. iOS Safari gives date/time
+   fields an intrinsic minimum width that ignores width:100%, and grid columns
+   sized 1fr grow to fit their widest child — so every input may shrink, date
+   and time fields drop the native look (keeping the native picker), and long
+   button labels wrap instead of pushing out. */
+.field,.two>*{min-width:0}
+.inp{min-width:0;max-width:100%}
+input[type=date].inp,input[type=time].inp,input[type=datetime-local].inp{-webkit-appearance:none;appearance:none;display:block;min-width:0;width:100%;min-height:44px;text-align:left}
+.inp::-webkit-date-and-time-value{text-align:left;margin:0}
+.inp::-webkit-datetime-edit{padding:0}
+select.inp{min-width:0;text-overflow:ellipsis}
+.modal{overflow-x:hidden}
+.modal .btn{max-width:100%;white-space:normal}
 .modrow{display:flex;gap:9px;margin-top:15px;flex-wrap:wrap;align-items:center}
 .modrow .spacer{flex:1}
 
@@ -598,7 +612,13 @@ textarea.inp{resize:vertical;min-height:56px;font-weight:500}
   .main{gap:7px;min-height:0;flex:1}
   .view{gap:7px}
   .toolbar{gap:5px}
-  .toolbar .datenav{flex:1 1 100%;width:auto!important}
+  /* DAILY: date bar shares its row with + BLOCK and TODAY, like on a computer */
+  .toolbar .datenav{flex:1 1 0;min-width:120px;width:auto!important;padding:2px 4px}
+  .toolbar .datenav .d{font-size:14px}
+  .toolbar .datenav .d span{font-size:8px;letter-spacing:1.4px}
+  .toolbar .datenav .navbtn{width:26px;height:26px}
+  #viewDay .toolbar .spacer{display:none}
+  #btnGrade{order:5;flex:1 1 100%}
   .btn.sm{font-size:12.5px;padding:5px 8px 6px}
   .gridwrap,.listwrap,.tkwrap{height:auto;flex:1;min-height:0}
   .gridwrap{padding:6px 6px 18px}
@@ -617,7 +637,7 @@ textarea.inp{resize:vertical;min-height:56px;font-weight:500}
   /* calendar: compact cells */
   .calwrap{padding:6px}
   .calgrid,.dow{gap:3px}
-  .day{min-height:96px;padding:3px 3px 6px;border-width:2px;border-radius:7px;gap:2px}
+  .day{min-height:0;padding:3px 3px 6px;border-width:2px;border-radius:7px;gap:2px}
   .day .cq{font-size:8px;padding:0 2px;border-width:1px}
   .day .ev .tm{display:none}
   .dow{top:-6px;margin:-6px -6px 4px;padding:6px 6px 4px}
@@ -722,7 +742,6 @@ textarea.inp{resize:vertical;min-height:56px;font-weight:500}
           <button class="navbtn" id="dNext">›</button>
         </div>
         <button class="btn sm blue" id="btnQuick">+ BLOCK</button>
-        <button class="btn sm" id="btnAutofill">AUTOFILL</button>
         <div class="spacer"></div>
         <button class="btn gold" id="btnGrade" hidden>⚑ GRADE 0</button>
         <button class="btn sm" id="btnToday">TODAY</button>
@@ -1723,10 +1742,33 @@ function preview(a, b) {
 }
 function killPreview() { const p = $('#pv'); if (p) p.remove(); }
 
+/* Touch (phones, tablets): the timeline belongs to scrolling. A finger only
+   acts on a TAP — down and up without moving — and then does what a mouse
+   click would: open the block, grade it, open the event, toggle SOD/EOD, or
+   add a 1-hour block on empty time. Dragging never paints or resizes; times
+   change in the block editor instead. The browser fires pointercancel the
+   moment it takes a drag over for scrolling, which drops the pending tap. */
+let tap = null;
+function tapAct(target) {
+  const edgeB = target.closest('.edge b[data-act="toggle"]');
+  if (edgeB) { toggleEdge(edgeB.closest('.edge').dataset.edge); return; }
+  const bEl = target.closest('.blk');
+  if (bEl) {
+    const bb = findBlock(cur, bEl.dataset.id);
+    if (bb && isEvent(bb)) { openTodayEvent(bb); return; }
+    if (target.dataset.act === 'tick') { openGrade(bEl.dataset.id); return; }
+    openBlockEditor(bEl.dataset.id); return;
+  }
+  if (isPastDay(cur)) return;
+  const cell = target.closest('.cell'); if (!cell) return;
+  const slot = +cell.dataset.slot;
+  openBlockEditor(null, slot, Math.min(4, SLOTS - slot));
+}
 function bindGrid() {
   const g = $('#grid');
   g.addEventListener('pointerdown', e => {
-    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (e.pointerType !== 'mouse') { tap = { id: e.pointerId, x: e.clientX, y: e.clientY, target: e.target }; return; }
+    if (e.button !== 0) return;
     const edgeB = e.target.closest('.edge b[data-act="toggle"]');
     if (edgeB) { e.preventDefault(); toggleEdge(edgeB.closest('.edge').dataset.edge); return; }
     const bEl = e.target.closest('.blk');
@@ -1747,16 +1789,21 @@ function bindGrid() {
     if (isPastDay(cur)) return;
     const cell = e.target.closest('.cell'); if (!cell) return;
     const slot = +cell.dataset.slot;
-    if (e.pointerType !== 'mouse') { openBlockEditor(null, slot, Math.min(4, SLOTS - slot)); return; }
     e.preventDefault();
     paint = { a: slot, b: slot }; g.setPointerCapture(e.pointerId);
     preview(slot, slot); sfx('tick');
   });
   g.addEventListener('pointermove', e => {
+    if (tap && e.pointerId === tap.id && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) > 10) tap = null;   // it's a drag: let it scroll
     if (paint) { const s = slotFromEvent(e); if (s !== paint.b) { paint.b = s; preview(paint.a, paint.b); sfx('tick', Math.abs(paint.b - paint.a)); } }
     else if (resizing) { const s = Math.max(resizing.start, slotFromEvent(e)); preview(resizing.start, s); resizing.cur = s; }
   });
   g.addEventListener('pointerup', e => {
+    if (tap && e.pointerId === tap.id) {
+      const t = tap; tap = null;
+      if (Math.hypot(e.clientX - t.x, e.clientY - t.y) <= 10) tapAct(t.target);
+      return;
+    }
     if (paint) {
       const s = Math.min(paint.a, paint.b), en = Math.max(paint.a, paint.b) + 1;
       paint = null; killPreview();
@@ -1767,7 +1814,7 @@ function bindGrid() {
       if (newLen !== r.len) commitResize(r.id, newLen); else renderDay();
     }
   });
-  g.addEventListener('pointercancel', () => { paint = null; resizing = null; killPreview(); });
+  g.addEventListener('pointercancel', () => { tap = null; paint = null; resizing = null; killPreview(); });
 }
 function commitResize(id, newLen) {
   const d = getDay(cur), b = d.blocks.find(x => x.id === id); if (!b) return;
@@ -2385,7 +2432,7 @@ function openDayPanel(ds) {
 }
 
 /* ---------------- copy blocks (CALENDAR's day panel + DAILY's AUTOFILL) ----------------
-   Shared by copyInto (CALENDAR) and autofillDay (DAILY): only TASK blocks
+   Used by copyInto (CALENDAR's day panel): only TASK blocks
    ever move (events are never touched — they're always re-derived by
    syncEventsOn, not something to copy) and only into currently-free time —
    an existing block in `dstDs`, or an event, always wins; the incoming block
@@ -2419,64 +2466,6 @@ function copyInto(srcDs, dstDs) {
   return n;
 }
 
-/* ---------------- AUTOFILL (DAILY toolbar) ----------------
-   Copies just the TASK blocks (never events, never quotas) from another day
-   into `cur`, either merged around whatever is already booked (mode 'keep',
-   the default — same free-space-only carving copyInto uses) or after
-   wiping cur's existing blocks first (mode 'wipe' — events included in the
-   wipe, since syncEventsOn/renderAll rebuild them fresh regardless). */
-function autofillDay(srcDs, dstDs, wipe) {
-  if (isPastDay(dstDs)) { toast('Past days are archived'); return; }
-  if (!taskBlocks(dayOf(srcDs)).length) { toast('Nothing to copy from ' + prettyD(srcDs)); return; }
-  pushUndo();
-  if (wipe) getDay(dstDs).blocks = [];
-  const n = mergeBlocksFreeSpace(srcDs, dstDs);
-  save(); closeModal(); renderAll(); sfx('place');
-  toast(n ? n + ' block' + (n === 1 ? '' : 's') + ' autofilled from ' + prettyD(srcDs) : 'No free space to autofill into');
-}
-
-function openAutofill() {
-  if (isPastDay(cur)) { toast('Past days are archived'); return; }
-  const yestDs = shiftD(cur, -1), lastWkDs = shiftD(cur, -7);
-  const label = cur === todayStr() ? 'TODAY' : prettyD(cur);
-  let src = null, mode = 'keep';
-  openModal(
-    '<h3>AUTOFILL ' + esc(label) + '<button class="btn sm x" data-x>✕</button></h3>' +
-    '<div class="field"><label>COPY BLOCKS FROM</label>' +
-    '<div class="modrow" style="flex-wrap:wrap;gap:7px;margin-top:2px">' +
-    '<button class="btn sm" data-src="yest">YESTERDAY<br><small style="font-weight:600;opacity:.7">' + esc(prettyD(yestDs)) + '</small></button>' +
-    '<button class="btn sm" data-src="lastweek">SAME DAY LAST WEEK<br><small style="font-weight:600;opacity:.7">' + esc(prettyD(lastWkDs)) + '</small></button>' +
-    '<button class="btn sm" data-src="pick">CHOOSE A DAY</button>' +
-    '</div>' +
-    '<input class="inp" type="date" id="afDate" value="' + yestDs + '" style="margin-top:8px" hidden></div>' +
-    '<div class="field"><label>IF ' + esc(label) + ' ALREADY HAS BLOCKS</label>' +
-    '<div class="modrow" style="flex-direction:column;gap:8px;align-items:stretch;margin-top:2px">' +
-    '<button class="btn gold" data-mode="keep">KEEP MINE — autofill only fills the empty time</button>' +
-    '<button class="btn" data-mode="wipe">DELETE MINE FIRST — autofill replaces everything</button>' +
-    '</div></div>' +
-    '<div class="modrow"><div class="spacer"></div><button class="btn green" data-go>AUTOFILL</button></div>'
-  );
-  const M = $('#modal');
-  M.querySelector('[data-x]').onclick = closeModal;
-  const srcBtns = M.querySelectorAll('[data-src]'), modeBtns = M.querySelectorAll('[data-mode]');
-  const dateInp = M.querySelector('#afDate');
-  srcBtns.forEach(b => b.onclick = () => {
-    src = b.dataset.src;
-    srcBtns.forEach(x => x.classList.toggle('gold', x === b));
-    dateInp.hidden = src !== 'pick';
-    if (src === 'pick') dateInp.focus();
-  });
-  modeBtns.forEach(b => b.onclick = () => {
-    mode = b.dataset.mode;
-    modeBtns.forEach(x => x.classList.toggle('gold', x === b));
-  });
-  M.querySelector('[data-go]').onclick = () => {
-    const srcDs = src === 'yest' ? yestDs : src === 'lastweek' ? lastWkDs : src === 'pick' ? dateInp.value : null;
-    if (!srcDs) { toast('Pick a day to copy from'); return; }
-    if (srcDs === cur) { toast('Pick a different day'); return; }
-    autofillDay(srcDs, cur, mode === 'wipe');
-  };
-}
 /* ---------------- day recap ---------------- */
 const FEEDBACK = [
   [95, 'Near-perfect use of the time you booked.'],
@@ -3061,7 +3050,6 @@ function bind() {
   $('#dNext').onclick = () => { goDay(shiftD(cur, 1)); sfx('click'); };
   $('#btnToday').onclick = () => { goDay(todayStr()); scrollToNow(true); sfx('click'); };
   $('#btnQuick').onclick = () => { const s = cur === todayStr() ? Math.floor(nowSlotFloat()) : 36; openBlockEditor(null, clamp(s, 0, 92), 4); };
-  $('#btnAutofill').onclick = openAutofill;
   $('#btnRecap').onclick = showRecap;
   $('#tkAdd').onclick = newTaskFromInput;
   $('#tkNew').addEventListener('keydown', e => { if (e.key === 'Enter') newTaskFromInput(); });

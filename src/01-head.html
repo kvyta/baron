@@ -251,6 +251,7 @@ button{font-family:inherit}
 .blk.now{animation:blkpulse 1.4s ease-in-out infinite}
 @keyframes blkpulse{0%,100%{box-shadow:0 3px 0 rgba(0,0,0,.5),0 0 0 0 rgba(255,201,61,.6)}50%{box-shadow:0 3px 0 rgba(0,0,0,.5),0 0 0 7px rgba(255,201,61,0)}}
 .rz{position:absolute;left:0;right:0;bottom:0;height:11px;cursor:ns-resize;z-index:9}
+@media (hover:none){ .rz{display:none} }   /* touch can't drag-resize — times change in the block editor */
 .rz::after{content:'';position:absolute;left:50%;bottom:2px;width:28px;height:3px;margin-left:-14px;border-radius:3px;background:rgba(0,0,0,.3);opacity:0}
 .blk:hover .rz::after{opacity:1}
 
@@ -346,7 +347,7 @@ button{font-family:inherit}
 .dow div{text-align:center;font-size:10px;font-weight:900;letter-spacing:2px;opacity:.55}
 .calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
 .day{
-  min-height:136px;background:var(--panel);border:3px solid var(--ink);border-radius:10px;padding:5px 6px;
+  aspect-ratio:1/2;min-height:0;background:var(--panel);border:3px solid var(--ink);border-radius:10px;padding:5px 6px;
   box-shadow:0 4px 0 rgba(0,0,0,.4), inset 0 2px 0 rgba(255,255,255,.07);cursor:pointer;position:relative;overflow:hidden;
   transition:transform .1s cubic-bezier(.2,1.6,.4,1);display:flex;flex-direction:column;gap:3px;
 }
@@ -421,7 +422,20 @@ button{font-family:inherit}
 select.inp{cursor:pointer}
 textarea.inp{resize:vertical;min-height:56px;font-weight:500}
 .ro{background:#171b20;color:#c9d3d8;border-style:dashed;cursor:default}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+/* Nothing in a modal may be wider than the modal. iOS Safari gives date/time
+   fields an intrinsic minimum width that ignores width:100%, and grid columns
+   sized 1fr grow to fit their widest child — so every input may shrink, date
+   and time fields drop the native look (keeping the native picker), and long
+   button labels wrap instead of pushing out. */
+.field,.two>*{min-width:0}
+.inp{min-width:0;max-width:100%}
+input[type=date].inp,input[type=time].inp,input[type=datetime-local].inp{-webkit-appearance:none;appearance:none;display:block;min-width:0;width:100%;min-height:44px;text-align:left}
+.inp::-webkit-date-and-time-value{text-align:left;margin:0}
+.inp::-webkit-datetime-edit{padding:0}
+select.inp{min-width:0;text-overflow:ellipsis}
+.modal{overflow-x:hidden}
+.modal .btn{max-width:100%;white-space:normal}
 .modrow{display:flex;gap:9px;margin-top:15px;flex-wrap:wrap;align-items:center}
 .modrow .spacer{flex:1}
 
@@ -598,7 +612,13 @@ textarea.inp{resize:vertical;min-height:56px;font-weight:500}
   .main{gap:7px;min-height:0;flex:1}
   .view{gap:7px}
   .toolbar{gap:5px}
-  .toolbar .datenav{flex:1 1 100%;width:auto!important}
+  /* DAILY: date bar shares its row with + BLOCK and TODAY, like on a computer */
+  .toolbar .datenav{flex:1 1 0;min-width:120px;width:auto!important;padding:2px 4px}
+  .toolbar .datenav .d{font-size:14px}
+  .toolbar .datenav .d span{font-size:8px;letter-spacing:1.4px}
+  .toolbar .datenav .navbtn{width:26px;height:26px}
+  #viewDay .toolbar .spacer{display:none}
+  #btnGrade{order:5;flex:1 1 100%}
   .btn.sm{font-size:12.5px;padding:5px 8px 6px}
   .gridwrap,.listwrap,.tkwrap{height:auto;flex:1;min-height:0}
   .gridwrap{padding:6px 6px 18px}
@@ -617,7 +637,7 @@ textarea.inp{resize:vertical;min-height:56px;font-weight:500}
   /* calendar: compact cells */
   .calwrap{padding:6px}
   .calgrid,.dow{gap:3px}
-  .day{min-height:96px;padding:3px 3px 6px;border-width:2px;border-radius:7px;gap:2px}
+  .day{min-height:0;padding:3px 3px 6px;border-width:2px;border-radius:7px;gap:2px}
   .day .cq{font-size:8px;padding:0 2px;border-width:1px}
   .day .ev .tm{display:none}
   .dow{top:-6px;margin:-6px -6px 4px;padding:6px 6px 4px}

@@ -121,7 +121,7 @@ written to both. UNSYNC stops writing the file.
 On a phone, open [kvyta.github.io/baron](https://kvyta.github.io/baron), sign
 in, then **Add to Home Screen** — it opens full-screen like an app. The score
 sits in a bar at the top (tap it for the full rail), tabs scroll sideways, and
-tapping empty time adds a one-hour block.
+tapping empty time adds a one-hour block — dragging just scrolls.
 
 ### Accounts
 
