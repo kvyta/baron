@@ -544,6 +544,13 @@ textarea.inp{resize:vertical;min-height:56px;font-weight:500}
 .svs{font-size:12.5px;font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .svs i{font-style:normal;color:#8fa0a8} .svs i.ok{color:var(--green)} .svs i.wait{color:var(--gold)} .svs i.bad{color:var(--mult)}
 .svb{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+.svdropwrap{position:relative;display:inline-block}
+.svdrop{position:absolute;right:0;top:calc(100% + 6px);z-index:5;display:grid;gap:4px;min-width:230px;background:var(--panel);border:3px solid var(--ink);border-radius:10px;padding:5px;box-shadow:0 6px 0 rgba(0,0,0,.5)}
+.svdrop[hidden]{display:none}
+.svdrop button{display:block;text-align:left;background:#1b2026;color:#fff;border:2px solid var(--ink);border-radius:8px;padding:7px 9px;cursor:pointer;font-family:var(--f-ui)}
+.svdrop button:hover,.svdrop button:focus-visible{border-color:var(--gold);outline:none}
+.svdrop b{display:block;font-family:var(--f-disp);font-weight:400;font-size:13px}
+.svdrop small{display:block;font-size:10.5px;font-weight:700;opacity:.6;margin-top:1px}
 @media (max-width:520px){ .svrow{grid-template-columns:44px minmax(0,1fr)} .svb{grid-column:1/-1;justify-content:flex-start} }
 .gbtn b{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;background:#fff;color:#4285f4;font-family:var(--f-ui);font-weight:900;font-size:11px;margin-right:4px;vertical-align:-2px;border:1.5px solid var(--ink)}
 /* ============ cloud sync dot ============ */

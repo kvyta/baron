@@ -16,7 +16,7 @@ const src = (f) => join(here, 'src', f);
 const out = join(here, 'baron.html');
 
 const HTML = ['01-head.html', '02-body.html'];
-const JS = ['03-core.js', '04-day.js', '05-views.js', '06-sync.js', '08-qr.js', '09-boot.js'];
+const JS = ['03-core.js', '04-day.js', '05-views.js', '06-sync.js', '07-local.js', '09-boot.js'];
 
 function build() {
   const parts = [];

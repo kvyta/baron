@@ -887,18 +887,10 @@ function renderTable(pts) {
 
 /* ---------------- menu / help / categories ---------------- */
 function openMenu() {
-  /* SAVING: cloud, file and manual backup as three compact rows. The file
-     row only exists where the browser can write files (Chrome/Edge/Brave). */
-  const fileRow = fsStatus === 'unsupported' || !fsSupported() ? '' :
-    '<div class="svrow" title="Writes every change to a .json file on this computer — a backup that survives cache clears."><span class="svk">FILE</span>' +
-    (fsStatus === 'on' ? '<span class="svs" id="fsDot"><i class="ok">●</i> ' + esc(fileHandle ? fileHandle.name : 'file') + '</span><span class="svb"><button class="btn sm" data-link>CHANGE</button><button class="btn sm" data-open>OPEN…</button></span>'
-      : fsStatus === 'need' ? '<span class="svs"><i class="wait">●</i> paused — needs permission</span><span class="svb"><button class="btn sm green" data-grant>RESUME</button><button class="btn sm" data-open>OPEN…</button></span>'
-        : '<span class="svs">Off</span><span class="svb"><button class="btn sm green" data-link>SAVE TO FILE…</button><button class="btn sm" data-open>OPEN…</button></span>') +
-    '</div>';
   openModal(
     '<h3>☰ MENU<button class="btn sm x" data-x>✕</button></h3>' +
-    '<div class="field"><label>SAVING</label><div class="saving">' + cloudRowHtml() + fileRow +
-    '<div class="svrow" title="Download or load a one-off copy of everything."><span class="svk">COPY</span><span class="svs">Manual backup</span><span class="svb"><button class="btn sm" data-exp>EXPORT</button><button class="btn sm" data-imp>IMPORT</button></span></div>' +
+    '<div class="field"><label>SAVING</label><div class="saving">' + cloudRowHtml() +
+    localRowHtml() +
     '</div></div>' +
     '<div class="field"><label>ALERTS</label>' +
     '<div class="li"><span>' + (typeof Notification === 'undefined' ? 'This browser has no desktop notifications'
@@ -918,13 +910,9 @@ function openMenu() {
   const M = $('#modal');
   M.querySelectorAll('[data-x]').forEach(b => b.onclick = closeModal);
   bindCloudMenu(M);
-  const lk = M.querySelector('[data-link]'); if (lk) lk.onclick = () => linkFile(false);
-  const op = M.querySelector('[data-open]'); if (op) op.onclick = () => linkFile(true);
-  const gr = M.querySelector('[data-grant]'); if (gr) gr.onclick = () => { grantHandle(); closeModal(); };
+  bindLocalMenu(M);
   const nb = M.querySelector('[data-notify]');
   if (nb) nb.onclick = () => { askNotify(); closeModal(); };
-  M.querySelector('[data-exp]').onclick = exportJSON;
-  M.querySelector('[data-imp]').onclick = importJSON;
   M.querySelector('[data-clear]').onclick = () => {
     if (isPastDay(cur)) { toast('Past days are archived'); return; }
     const d = getDay(cur);
@@ -966,7 +954,7 @@ function openHelp() {
     '<b class="goldtxt">GOLD / 1000</b> — score × rank. It only goes up if you both booked a real day <i>and</i> did it well.' +
     '</div>' +
     rows.map(r => '<div class="helprow"><span class="kbd">' + r[0] + '</span><b>' + r[1] + '</b></div>').join('') +
-    '<div class="hint" style="font-size:12.5px;line-height:1.6;margin-top:12px">Your run saves in this browser automatically. Open <b>☰ Menu → SAVE TO DISK</b> once and it also writes every change straight into a real <b>.json</b> file on your computer — so a restart, a cache clear, or a new browser can’t lose it. Put that file in Dropbox/iCloud and it follows you.</div>' +
+    '<div class="hint" style="font-size:12.5px;line-height:1.6;margin-top:12px">Sign in (☰ Menu → SAVING → CLOUD) and your planner lives in your account: every change saves to the cloud, and any phone or computer you sign in on shows the same planner. LOCAL keeps a .json file on this computer identical to it as well.</div>' +
     '<div class="modrow"><div class="spacer"></div><button class="btn gold" data-x>GOT IT</button></div>'
   );
   $('#modal').querySelectorAll('[data-x]').forEach(b => b.onclick = closeModal);

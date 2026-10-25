@@ -56,11 +56,8 @@ function renderRail() {
   gb.hidden = pend.length === 0;
   gb.textContent = '⚑ GRADE ' + pend.length + ' BLOCK' + (pend.length === 1 ? '' : 'S');
 
-  /* disk auto-save lives in the ☰ menu now — flag it here only if it needs you */
   const mb = $('#btnMenu');
-  mb.classList.toggle('need', fsStatus === 'need');
-  mb.title = fsStatus === 'on' ? 'Menu — auto-saving to ' + (fileHandle ? fileHandle.name : 'disk')
-    : fsStatus === 'need' ? 'Menu — auto-save paused, click to resume' : 'Menu';
+  mb.title = 'Menu';
 }
 
 /* blocks whose time has passed but that are still ungraded (today only) */

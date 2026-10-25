@@ -92,52 +92,52 @@ cd baron
 start baron.html      # Windows   (open baron.html on macOS)
 ```
 
-## On your phone
+## Saving: sign in, everywhere
 
-Open [kvyta.github.io/baron](https://kvyta.github.io/baron) on your phone,
-open ☰ and sign in, then use your browser's **Add to Home Screen** — Baron
-opens full-screen, works offline, and syncs when it's back online.
-`☰ Menu → LINK PHONE` on your computer shows a QR code for the same link.
+Baron saves to your account. Sign in (☰ Menu → SAVING, or the green
+**SIGN IN** button) on any phone or computer and it shows the same planner:
+every change saves about a second later, and other devices pick it up when you
+switch back to them, or within 45 seconds. If two devices edited at once, the
+changes are merged item by item — the device in your hand wins a true tie, and
+a delete never beats an edit. Each device keeps a cached copy, so Baron still
+opens and works offline and catches up when it reconnects.
 
-On a phone the score sits in a bar at the top (tap it for the full rail), tabs
-scroll sideways, and tapping empty time adds a one-hour block.
+Signed out, your planner lives only in that browser.
 
-## Cloud sync
+**LOCAL** (☰ Menu → SAVING; only shown in Chrome/Edge/Brave on a computer) keeps a `.json`
+file on your computer identical to your planner. SYNC asks which side wins —
+*Prioritize local* or *Prioritize cloud* — then merges the file with your
+planner item by item: tasks with the same name become one, the same block
+keeps the winning side's grade and times, overlapping blocks give way to the
+winning side's timeline, and events and quotas from both sides are kept. The
+result goes to both the cloud and the file, and every change after that is
+written to both. UNSYNC stops writing the file.
 
-Baron's built-in cloud (☰ → SIGN IN WITH GOOGLE) is private to the repo's
-owner. Anyone else who signs in is asked to connect their own project, which
-takes a few minutes:
+> Save files are gitignored. Keep yours outside the repo folder.
 
-1. Create a free project at [supabase.com](https://supabase.com).
+On a phone, open [kvyta.github.io/baron](https://kvyta.github.io/baron), sign
+in, then **Add to Home Screen** — it opens full-screen like an app. The score
+sits in a bar at the top (tap it for the full rail), tabs scroll sideways, and
+tapping empty time adds a one-hour block.
+
+### Accounts
+
+The built-in cloud (☰ → **SIGN IN WITH GOOGLE**) is private to the repo's
+owner. Anyone else who signs in is asked to connect their own free project:
+
+1. Create a project at [supabase.com](https://supabase.com).
 2. In its SQL editor, run [`supabase/schema.sql`](supabase/schema.sql).
 3. In Baron: `☰ Menu → OWN PROJECT`, paste the project URL and the
    **publishable** key (Project Settings → API keys), then sign in with an
    email and password (or Google, if you turn that provider on).
 
-Every change syncs about a second later; other devices pick it up when you
-switch back to them, or within 45 seconds. If two devices edited at once, the
-changes are merged item by item — the device in your hand wins a true tie, and
-a delete never beats an edit. Row-level security locks each account to its own
-row, which is why a publishable key is safe in public.
+Row-level security locks each account to its own row, which is why a
+publishable key is safe in public. Google sign-in needs the online copy: a
+file opened from your disk can't be returned to after Google, so Baron sends
+you there instead.
 
-Google sign-in needs the online copy: a file opened from your disk can't be
-returned to after Google, so Baron sends you to the online copy instead.
-
-## Where your data lives
-
-Everything is stored in your **browser's local storage**, per browser and per
-machine — plus your own Supabase project, if you turn on cloud sync. Nothing in this repository contains any planner data — clone it and you
-start from an empty planner.
-
-Because browser storage can be cleared by accident, `☰ Menu → SAVE TO DISK`
-links Baron to a real `.json` file on your computer and writes every change
-straight into it. Put that file in Dropbox or iCloud and your planner follows
-you between machines. `EXPORT .JSON` / `IMPORT .JSON` do the same thing manually.
-
-> Save files are gitignored. Keep yours outside the repo folder.
-
-The disk link needs the File System Access API — Chrome, Edge or Brave. Firefox
-and Safari fall back to browser storage plus manual export.
+Nothing in this repository contains any planner data — clone it and you start
+from an empty planner.
 
 ## Building
 
@@ -159,8 +159,8 @@ src/
   03-core.js        state, save/load, tasks, events, scoring
   04-day.js         rail, timeline, list, block and event editors
   05-views.js       quotas, calendar, tasks, stats, menu, alerts, wiring
-  06-sync.js        optional Supabase cloud sync: auth, push/pull, 3-way merge, device link
-  08-qr.js          vendored QR encoder (MIT) for LINK A DEVICE
+  06-sync.js        cloud saving: Google / email sign-in, push/pull, 3-way merge
+  07-local.js       LOCAL: keep a .json file in step with the cloud (priority merge)
   09-boot.js        boot
 manifest.webmanifest, sw.js, icons/   installable app (PWA)
 supabase/schema.sql                   table + push_state() for cloud sync
@@ -186,10 +186,6 @@ Two typefaces are embedded in `baron.html`, both under the
   ([source](https://github.com/eifetx/Pixelify-Sans))
 - **Outfit** — © 2021 The Outfit Project Authors
   ([source](https://github.com/Outfitio/Outfit-Fonts))
-
-The QR encoder used for LINK A DEVICE is
-[qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator)
-© 2009 Kazuhiko Arase, MIT — see `licenses/MIT-qrcode-generator.txt`.
 
 The OFL permits bundling and redistribution, including inside a commercial
 work, provided the fonts are not sold on their own and these notices travel

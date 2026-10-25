@@ -5,7 +5,7 @@
    declared in 06 doesn't exist yet while 05's top level runs. */
 (async function init() {
   loadLocal();
-  await restoreHandle();
+  await restoreLocalFile();
   sealPastDays(true);
   /* one-time (per save) migration: materialize every event that was sitting
      "unpulled" under the old manual-pull system into a real event-block, and
@@ -31,8 +31,6 @@
   }
   if (!localStorage.getItem('baron.seen')) {
     try { localStorage.setItem('baron.seen', '1'); } catch (e) {}
-    if (!cloud.cfg) setTimeout(openHelp, 500);
-  } else if (fsStatus === 'need') {
-    setTimeout(() => toast('Open ☰ to resume auto-saving to your file'), 700);
+    if (!cloudOn()) setTimeout(openHelp, 500);
   }
 })();

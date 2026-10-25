@@ -234,6 +234,8 @@ function setCloudStatus(s, err) {
     : s === 'syncing' ? 'Syncing…' : s === 'offline' ? 'Offline — changes will sync when you reconnect'
       : s === 'error' ? 'Sync problem: ' + cloud.err : 'Cloud sync off';
   els.forEach(el => { el.hidden = !cloudOn() && s === 'off'; el.dataset.s = s; el.title = title; });
+  /* signed out: the only way to save is to sign in, so say so where it's always visible */
+  $$('.signinbtn').forEach(b => { b.hidden = cloudOn(); });
 }
 
 /* ---------- the sync loop ---------- */
@@ -271,7 +273,7 @@ function integrateRemote(remote, rev) {
     sealPastDays(true);
     syncAllEventBlocks();
     try { localStorage.setItem(LS_KEY, snapshot()); } catch (e) {}
-    queueFileSave();
+    if (typeof queueFileSave === 'function') queueFileSave();   // a synced local file follows the cloud too
   } finally { cloud.applying = false; }
   cloud.meta.rev = rev;
   cloud.meta.base = canon(remote);
@@ -319,36 +321,13 @@ async function cloudSync(reason) {
   if (cloud.again) { cloud.again = false; setTimeout(() => cloudSync('again'), 60); }
 }
 
-/* ---------- device link: Baron's own cloud needs nothing but the page;
-   a custom project rides along as #cloud=<url+publishable key>, never a password ---------- */
-const b64u = s => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-const unb64u = s => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/'))));
 const onlineHere = () => /^https?:/.test(location.protocol);
-function deviceLink() {
-  const here = onlineHere() ? location.origin + location.pathname : PUBLIC_URL;
-  return isDefaultCloud() ? here : here + '#cloud=' + b64u(JSON.stringify({ u: cloud.cfg.url, k: cloud.cfg.key }));
-}
 function setCustomCloud(u, k) {
   if (!cloud.cfg || cloud.cfg.url !== u) { cloud.auth = null; lsSet(CLOUD_AUTH, null); cloud.meta = freshMeta(); saveMeta(); }
   cloud.cfg = { url: u, key: k };
   lsSet(CLOUD_CFG, u === DEFAULT_CLOUD.url ? null : cloud.cfg);
   if (u === DEFAULT_CLOUD.url) cloud.cfg = DEFAULT_CLOUD;
 }
-function readCloudHash() {
-  const m = /[#&]cloud=([^&]+)/.exec(location.hash || '');
-  if (!m) return false;
-  try { const o = JSON.parse(unb64u(m[1])); if (o.u && o.k) setCustomCloud(o.u, o.k); } catch (e) { console.warn('bad cloud link'); }
-  try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
-  return true;
-}
-function qrSvg(text) {
-  const q = qrcode(0, 'M'); q.addData(text); q.make();
-  const n = q.getModuleCount(), m = 2;
-  let p = '';
-  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (q.isDark(r, c)) p += 'M' + (c + m) + ' ' + (r + m) + 'h1v1h-1z';
-  return '<svg viewBox="0 0 ' + (n + 2 * m) + ' ' + (n + 2 * m) + '" shape-rendering="crispEdges" style="width:100%;height:auto;display:block;background:#fff;border-radius:8px"><path d="' + p + '" fill="#0a0d10"/></svg>';
-}
-
 /* ---------- Google sign-in (Supabase OAuth, redirect flow) ----------
    Leaves the page for Google and comes back with the session in the URL
    fragment. A file opened from disk can't be returned to, so there it sends
@@ -380,26 +359,20 @@ function signedInOK() {
 const googleBtn = (cls) => '<button class="btn ' + (cls || '') + ' gbtn" data-cloud="google"><b>G</b> SIGN IN WITH GOOGLE</button>';
 /* one compact row in ☰ Menu → SAVING (see openMenu in 05-views.js) */
 function cloudRowHtml() {
-  const row = (st, btns, title) => '<div class="svrow" title="' + esc(title) + '"><span class="svk">CLOUD</span><span class="svs">' + st + '</span><span class="svb">' + btns + '</span></div>';
-  const tip = 'Cloud sync keeps your phone and computer on the same planner.';
-  if (!cloudOn()) return isDefaultCloud()
-    ? row('Not signed in', googleBtn('sm green') + '<button class="btn sm" data-cloud="setup">OWN PROJECT</button>', tip)
-    : row('Your project · not signed in', '<button class="btn sm green" data-cloud="signin">SIGN IN</button><button class="btn sm" data-cloud="setup">PROJECT</button>', tip);
-  const when = cloud.meta.last ? ' ' + new Date(cloud.meta.last).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
-  const st = cloud.status === 'idle' ? '<i class="ok">●</i> synced' + when
-    : cloud.status === 'syncing' ? '<i class="wait">●</i> syncing…' : cloud.status === 'offline' ? '<i>●</i> offline' : cloud.status === 'error' ? '<i class="bad">●</i> ' + esc(cloud.err) : '<i>●</i> waiting';
-  return row(st + ' · ' + esc(cloud.auth.user.email),
-    '<button class="btn sm blue" data-cloud="now">SYNC</button><button class="btn sm gold" data-cloud="link">LINK PHONE</button><button class="btn sm red" data-cloud="out">SIGN OUT</button>',
-    tip + ' Signed in as ' + cloud.auth.user.email + '.');
+  const on = cloudOn();
+  return '<div class="svrow"' + (on ? ' title="' + esc('Signed in as ' + cloud.auth.user.email) + '"' : '') + '><span class="svk">CLOUD</span>' +
+    '<span class="svs">' + (on ? 'On' : 'Off') + '</span><span class="svb">' +
+    (on ? '<button class="btn sm red" data-cloud="out">SIGN OUT</button>' : '<button class="btn sm red" data-cloud="in">SIGN IN</button>') +
+    '</span></div>';
 }
 function bindCloudMenu(M) {
   M.querySelectorAll('[data-cloud]').forEach(b => b.onclick = () => {
     const a = b.dataset.cloud;
-    if (a === 'google') startGoogle();
+    if (a === 'in') signInAction();
+    else if (a === 'google') startGoogle();
     else if (a === 'setup') openCloudSetup();
     else if (a === 'signin') openCloudSignIn();
     else if (a === 'now') { closeModal(); cloudSync('manual').then(() => toast(cloud.status === 'idle' ? 'Synced' : 'Sync: ' + (cloud.err || cloud.status))); }
-    else if (a === 'link') openDeviceLink();
     else if (a === 'out') { cloudSignOut(); closeModal(); toast('Signed out — this device keeps its copy'); }
   });
 }
@@ -440,18 +413,18 @@ function openCloudSetup(intro) {
   };
 }
 /* sign-in for a custom project: Google if that project turned it on, or email + password */
-function openCloudSignIn(first) {
+function openCloudSignIn() {
   openModal(
-    '<h3>' + (first ? 'LINK THIS DEVICE' : 'SIGN IN') + '<button class="btn sm x" data-x>✕</button></h3>' +
-    (first ? '<div class="hint" style="margin-bottom:10px">This link connected Baron to your cloud project. Sign in and this device picks up your planner.</div>' : '') +
+    '<h3>SIGN IN<button class="btn sm x" data-x>✕</button></h3>' +
     '<div class="modrow" style="margin:0 0 12px">' + googleBtn('blue') + '</div>' +
     '<div class="hint" style="margin-bottom:8px">Google works if your project has the Google provider turned on. Otherwise use an email and password:</div>' +
     '<div class="field"><label>EMAIL</label><input class="inp" id="cfE" type="email" autocomplete="username"></div>' +
     '<div class="field"><label>PASSWORD</label><input class="inp" id="cfP" type="password" autocomplete="current-password"></div>' +
     '<div class="hint" id="cfMsg" style="min-height:16px"></div>' +
-    '<div class="modrow"><button class="btn sm" data-up>CREATE ACCOUNT</button><div class="spacer"></div><button class="btn green" data-in>SIGN IN</button></div>'
+    '<div class="modrow"><button class="btn sm" data-up>CREATE ACCOUNT</button><button class="btn sm" data-proj>CHANGE PROJECT</button><div class="spacer"></div><button class="btn green" data-in>SIGN IN</button></div>'
   );
   const M = $('#modal'), msg = M.querySelector('#cfMsg');
+  M.querySelector('[data-proj]').onclick = () => openCloudSetup();
   M.querySelector('[data-x]').onclick = closeModal;
   M.querySelector('[data-cloud="google"]').onclick = startGoogle;
   const vals = () => [M.querySelector('#cfE').value.trim(), M.querySelector('#cfP').value];
@@ -473,29 +446,9 @@ function openCloudSignIn(first) {
   };
   M.querySelector('#cfP').addEventListener('keydown', ev => { if (ev.key === 'Enter') M.querySelector('[data-in]').click(); });
 }
-function openDeviceLink() {
-  const link = deviceLink();
-  openModal(
-    '<h3>LINK YOUR PHONE<button class="btn sm x" data-x>✕</button></h3>' +
-    '<div style="max-width:240px;margin:0 auto 12px">' + qrSvg(link) + '</div>' +
-    '<div class="hint" style="margin-bottom:10px">Scan this with your phone’s camera (or send yourself the link), open ☰ and sign in' + (isDefaultCloud() ? ' with Google' : '') + '. ' +
-    'Then use your browser’s <b>Add to Home Screen</b> and Baron runs like an app.</div>' +
-    '<input class="inp ro" id="dlUrl" readonly value="' + esc(link) + '">' +
-    '<div class="modrow"><button class="btn sm" data-copy>COPY LINK</button>' + (navigator.share ? '<button class="btn sm blue" data-share>SHARE…</button>' : '') +
-    '<div class="spacer"></div><button class="btn gold" data-x>DONE</button></div>'
-  );
-  const M = $('#modal');
-  M.querySelectorAll('[data-x]').forEach(b => b.onclick = closeModal);
-  M.querySelector('[data-copy]').onclick = () => {
-    const i = M.querySelector('#dlUrl'); i.select();
-    (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject()).then(() => toast('Link copied'), () => { document.execCommand('copy'); toast('Link copied'); });
-  };
-  const sh = M.querySelector('[data-share]');
-  if (sh) sh.onclick = () => navigator.share({ title: 'Baron', url: link }).catch(() => {});
-}
-
+function signInAction() { if (isDefaultCloud()) startGoogle(); else openCloudSignIn(); }
 async function startCloud() {
-  const linked = readCloudHash();
+  $$('.signinbtn').forEach(b => b.onclick = signInAction);
   let back = null;
   try { back = await readOAuthReturn(); } catch (e) { back = { err: e.message }; }
   if (back && back.err) {
@@ -510,7 +463,6 @@ async function startCloud() {
     toast('Signed in as ' + cloud.auth.user.email);
   }
   setCloudStatus(cloudOn() ? 'idle' : 'off');
-  if (linked && !isDefaultCloud() && !cloudOn()) setTimeout(() => openCloudSignIn(true), 400);
   if (cloudOn()) cloudSync('boot').then(() => { if (back && back.ok) renderAll(); });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Date.now() - cloud.lastPull > 5000) cloudSync('focus'); });
   window.addEventListener('online', () => cloudSync('online'));

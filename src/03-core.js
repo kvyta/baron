@@ -176,14 +176,13 @@ function bestDay() {
 /* ---------- persistence ---------- */
 const LS_KEY = 'baron.save';
 const LS_LEGACY = 'daylatro.v2';        // pre-Baron key, read once then retired
-let fileHandle = null, fsStatus = 'off', saveTimer = null;
 
 function snapshot() { return JSON.stringify({ v: 4, tasks: S.tasks, days: S.days, events: S.events, templates: S.templates, quotas: S.quotas, stats: S.stats, settings: S.settings }); }
 
 function save() {
   try { localStorage.setItem(LS_KEY, snapshot()); } catch (e) { /* private mode */ }
-  queueFileSave();
-  if (typeof cloudQueue === 'function') cloudQueue();   // 06-sync.js — no-op unless signed in
+  if (typeof queueFileSave === 'function') queueFileSave();   // 07-local.js — no-op unless a file is synced
+  if (typeof cloudQueue === 'function') cloudQueue();         // 06-sync.js — no-op unless signed in
 }
 function loadLocal() {
   try {
@@ -247,101 +246,6 @@ function migrateToTasks() {
     if (!b.taskId) b.taskId = get(b.title);
     delete b.title;
   }));
-}
-
-/* ---- File System Access API: keep a real .json file on disk in sync ---- */
-const IDB_NAME = 'baron', IDB_LEGACY = 'daylatro', IDB_STORE = 'fs';
-function idb(name) {
-  return new Promise((res, rej) => {
-    const r = indexedDB.open(name || IDB_NAME, 1);
-    r.onupgradeneeded = () => r.result.createObjectStore(IDB_STORE);
-    r.onsuccess = () => res(r.result);
-    r.onerror = () => rej(r.error);
-  });
-}
-async function idbSet(k, v) { try { const db = await idb(); await new Promise((res, rej) => { const t = db.transaction(IDB_STORE, 'readwrite'); t.objectStore(IDB_STORE).put(v, k); t.oncomplete = res; t.onerror = () => rej(t.error); }); } catch (e) {} }
-async function idbGet(k, name) { try { const db = await idb(name); return await new Promise((res, rej) => { const t = db.transaction(IDB_STORE, 'readonly'); const q = t.objectStore(IDB_STORE).get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); } catch (e) { return null; } }
-
-const fsSupported = () => typeof window.showSaveFilePicker === 'function';
-
-async function linkFile(existing) {
-  if (!fsSupported()) { toast('Browser can’t link files — use EXPORT'); return; }
-  try {
-    let h;
-    if (existing) {
-      const arr = await window.showOpenFilePicker({ types: [{ description: 'Baron save', accept: { 'application/json': ['.json'] } }] });
-      h = arr[0];
-      const txt = await (await h.getFile()).text();
-      if (txt.trim()) { adopt(JSON.parse(txt)); refreshStreak(); }
-    } else {
-      h = await window.showSaveFilePicker({
-        suggestedName: 'baron-save.json',
-        types: [{ description: 'Baron save', accept: { 'application/json': ['.json'] } }]
-      });
-    }
-    fileHandle = h; fsStatus = 'on';
-    await idbSet('handle', h);
-    await writeFile();
-    save(); renderAll();
-    toast('Auto-saving to ' + h.name);
-  } catch (e) { if (e && e.name !== 'AbortError') toast('Could not link file'); }
-}
-async function restoreHandle() {
-  if (!fsSupported()) { fsStatus = 'unsupported'; return; }
-  const h = (await idbGet('handle')) || (await idbGet('handle', IDB_LEGACY));
-  if (!h) return;
-  try {
-    let p = await h.queryPermission({ mode: 'readwrite' });
-    if (p === 'granted') {
-      fileHandle = h; fsStatus = 'on';
-      // prefer the newer of (file, localStorage)
-      try {
-        const txt = await (await h.getFile()).text();
-        if (txt.trim()) { const o = JSON.parse(txt); if (!localStorage.getItem(LS_KEY)) adopt(o); }
-      } catch (e) {}
-    } else { fileHandle = h; fsStatus = 'need'; }
-  } catch (e) { fsStatus = 'off'; }
-}
-async function grantHandle() {
-  if (!fileHandle) return linkFile(false);
-  try {
-    const p = await fileHandle.requestPermission({ mode: 'readwrite' });
-    if (p === 'granted') { fsStatus = 'on'; await writeFile(); toast('Auto-save resumed'); renderRail(); }
-  } catch (e) {}
-}
-function queueFileSave() {
-  if (!fileHandle || fsStatus !== 'on') return;
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(writeFile, 700);
-}
-async function writeFile() {
-  if (!fileHandle || fsStatus !== 'on') return;
-  try {
-    const w = await fileHandle.createWritable();
-    await w.write(snapshot()); await w.close();
-    const el = $('#fsDot'); if (el) { el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 400); }
-  } catch (e) { fsStatus = 'need'; renderRail(); }
-}
-function exportJSON() {
-  const blob = new Blob([snapshot()], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'baron-' + todayStr() + '.json';
-  a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1500);
-  toast('Backup downloaded');
-}
-function importJSON() {
-  const i = document.createElement('input'); i.type = 'file'; i.accept = 'application/json,.json';
-  i.onchange = () => {
-    const f = i.files[0]; if (!f) return;
-    const r = new FileReader();
-    r.onload = () => {
-      try { adopt(JSON.parse(r.result)); refreshStreak(); save(); renderAll(); closeModal(); toast('Save loaded'); }
-      catch (e) { toast('That file isn’t a Baron save'); }
-    };
-    r.readAsText(f);
-  };
-  i.click();
 }
 
 /* ---------- undo ---------- */
