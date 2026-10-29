@@ -22,7 +22,12 @@ const GRADES = [
 /* U is never chosen — it is stamped on anything still ungraded once the day
    is over. It scores below F on purpose: an honest F beats walking away. */
 const AUTO = { g: 'U', pts: 10, color: '#8fa0a8', label: 'never graded' };
-const ALL_GRADES = GRADES.concat([AUTO]);
+/* N is never chosen either — it is stamped, permanently, on a NEGATIVE block
+   (a block saved with no task): time you actively wasted, e.g. two hours of
+   scrolling. 0% — below F and U — and it hands its time back like F does. */
+const NEG = { g: 'N', pts: 0, color: '#c9b8ff', label: 'negative' };
+const ALL_GRADES = GRADES.concat([AUTO, NEG]);
+const isNeg = b => !!(b && b.neg);
 const ptsOf = g => { const x = ALL_GRADES.find(v => v.g === g); return x ? x.pts : 0; };
 const colOf = g => { const x = ALL_GRADES.find(v => v.g === g); return x ? x.color : '#888'; };
 const gradeOf = g => ALL_GRADES.find(v => v.g === g) || AUTO;
@@ -37,6 +42,11 @@ const C_EVENT = '#e2564c';
 /* one-off events go green in the CALENDAR month grid only, so a genuine
    appointment stands out from the wall of recurring commitments */
 const C_ONEOFF = '#35bd86';
+/* whole-day events are gold: a marker on the date (birthday, holiday, trip)
+   rather than booked time — they never become an event block, so they add
+   nothing to booked time or rank, and they have no start/end to show */
+const C_ALLDAY = '#ffc93d';
+const C_ALLDAY_INK = '#3a2c00';
 const isEvent = b => !!b.evId;
 
 /* Anything before today is sealed: no creating, editing, regrading or
@@ -102,7 +112,7 @@ function gradedScore(d) {
 /* How much of a block's time actually counts once it is graded.
    F and U hand the time back entirely — you did not spend it on this.
    D gives half. C and up count in full, as does anything not yet graded. */
-const GRADE_TIME = { A: 1, B: 1, C: 1, D: 0.5, F: 0, U: 0 };
+const GRADE_TIME = { A: 1, B: 1, C: 1, D: 0.5, F: 0, U: 0, N: 0 };
 const effLen = b => (b.done && GRADE_TIME[b.grade] != null) ? b.len * GRADE_TIME[b.grade] : b.len;
 
 /* The day's working window. 9:00a–10:00p unless blocks reach past either
@@ -132,7 +142,7 @@ const METRICS = {
 
 /* A day only counts toward the streak if you graded something yourself —
    an auto-U day means you planned and then never came back. */
-const hasActivity = ds => (S.days[ds] ? S.days[ds].blocks : []).some(b => b.done && !isEvent(b) && !b.auto);
+const hasActivity = ds => (S.days[ds] ? S.days[ds].blocks : []).some(b => b.done && !isEvent(b) && !b.auto && !isNeg(b));
 
 /* Stamp U on every block left ungraded on a day that has ended. */
 let lastSeal = '';
@@ -144,7 +154,7 @@ function sealPastDays(force) {
   Object.keys(S.days).forEach(ds => {
     if (!isPastDay(ds)) return;
     S.days[ds].blocks.forEach(b => {
-      if (isEvent(b) || b.done) return;
+      if (isEvent(b) || isNeg(b) || b.done) return;   // NEGATIVE stays N forever
       b.done = true; b.grade = 'U'; b.auto = true;
       changed = true;
     });
@@ -210,7 +220,26 @@ function adopt(o) {
   stripCats();
   if (o.v !== 4) migrateToTasks();
   migrateGrades();
+  if (cleanBlocks()) adoptDirty = true;
   return true;
+}
+/* Runs on every adopt (load, undo, file/cloud merge), so it can't be undone by
+   an older save or another device:
+   - block notes are gone as a feature — strip any left on task blocks.
+     (Event blocks keep theirs: it mirrors the event's own note, which still
+     lives in CALENDAR, and syncEventsOn compares against it.)
+   - a NEGATIVE block is always done + N; nothing (sealing, a merge, an old
+     build) gets to turn it into U or ungraded. */
+let adoptDirty = false;
+function cleanBlocks() {
+  let changed = false;
+  const fix = b => {
+    if (!isEvent(b) && 'note' in b) { delete b.note; changed = true; }
+    if (isNeg(b) && (!b.done || b.grade !== 'N' || b.auto)) { b.done = true; b.grade = 'N'; delete b.auto; changed = true; }
+  };
+  Object.keys(S.days).forEach(k => (S.days[k].blocks || []).forEach(fix));
+  S.templates.forEach(t => (t.blocks || []).forEach(fix));
+  return changed;
 }
 /* the fail grade is F. A build in between briefly called it E — undo that. */
 function migrateGrades() {
@@ -237,7 +266,7 @@ function migrateToTasks() {
     return byName[k].id;
   };
   Object.keys(S.days).forEach(k => (S.days[k].blocks || []).forEach(b => {
-    if (!isEvent(b) && !b.taskId) b.taskId = get(b.title);
+    if (!isEvent(b) && !isNeg(b) && !b.taskId) b.taskId = get(b.title);
     delete b.title;
   }));
   S.templates.forEach(t => (t.blocks || []).forEach(b => {
@@ -300,6 +329,7 @@ let taskSeq = 0;
 const taskOf = id => S.tasks.find(t => t.id === id);
 function taskLabel(b) {
   if (isEvent(b)) return b.evTitle || 'Event';
+  if (isNeg(b)) return 'NEGATIVE';
   const t = taskOf(b.taskId);
   /* taskName is stamped onto blocks when a task is deleted, so the archive
      never turns into a wall of "Deleted task" */
@@ -347,7 +377,7 @@ const visibleTasks = () => S.tasks.filter(t => !t.hidden);
 function occupancy(d, alsoEvents, ds) {
   const a = new Array(SLOTS).fill(null);
   d.blocks.forEach(b => { for (let i = b.start; i < b.start + b.len && i < SLOTS; i++) a[i] = b.id; });
-  if (alsoEvents) eventsOn(ds).forEach(ev => { for (let i = Math.floor(ev.s / 15); i < Math.ceil(ev.e / 15) && i < SLOTS; i++) if (!a[i]) a[i] = 'EV'; });
+  if (alsoEvents) eventsOn(ds).filter(ev => !isAllDay(ev)).forEach(ev => { for (let i = Math.floor(ev.s / 15); i < Math.ceil(ev.e / 15) && i < SLOTS; i++) if (!a[i]) a[i] = 'EV'; });
   return a;
 }
 function carve(d, start, end, keepEvents) {
@@ -361,10 +391,13 @@ function carve(d, start, end, keepEvents) {
   });
   d.blocks = out;
 }
-function addBlock(ds, start, len, taskId, note) {
+function addBlock(ds, start, len, taskId) {
   const d = getDay(ds);
   carve(d, start, start + len);
-  const b = { id: uid(), start, len, taskId: taskId, note: note || '', done: false, grade: null };
+  /* no task = a NEGATIVE block, graded N on the spot and for good */
+  const b = taskId
+    ? { id: uid(), start, len, taskId: taskId, done: false, grade: null }
+    : { id: uid(), start, len, neg: true, done: true, grade: 'N' };
   d.blocks.push(b);
   d.blocks.sort((x, y) => x.start - y.start);
   return b;
@@ -383,7 +416,7 @@ function addBlock(ds, start, len, taskId, note) {
    safe to call on every render of a date. */
 function syncEventsOn(ds) {
   if (isPastDay(ds)) return false;
-  const occ = eventsOn(ds);
+  const occ = eventsOn(ds).filter(ev => !isAllDay(ev));   // whole-day events never take up time
   const d = S.days[ds];
   if (!occ.length) {
     if (!d || !d.blocks.some(isEvent)) return false;
@@ -492,16 +525,23 @@ function nextUpcomingEvent(fromDs) {
   const nowMin = now.getHours() * 60 + now.getMinutes();
   for (let i = 0; i < 60; i++) {
     const ds = shiftD(fromDs, i);
-    const evs = eventsOn(ds).filter(e => i > 0 || e.s > nowMin);
+    const evs = eventsOn(ds).filter(e => i > 0 ? true : !isAllDay(e) && e.s > nowMin);
     if (evs.length) return evs[0];
   }
   return null;
 }
 const isRepeating = ev => ev && ev.rep && ev.rep !== 'none';
-/* one-offs first, then repeats, each by start time */
+/* a whole-day event is stored as a non-repeating event with allDay: true
+   (s/e pinned to 0/1440); the REPEAT picker shows it as "Whole day" */
+const isAllDay = ev => !!(ev && ev.allDay);
+const evColor = ev => isAllDay(ev) ? C_ALLDAY : isRepeating(ev) ? C_EVENT : C_ONEOFF;
+const evInk = ev => isAllDay(ev) ? C_ALLDAY_INK : '#fff';
+/* whole-day first, then one-offs, then repeats, each by start time */
 const calOrder = evs => evs.slice().sort((a, b) =>
+  (isAllDay(a) ? 0 : 1) - (isAllDay(b) ? 0 : 1) ||
   (isRepeating(a) ? 1 : 0) - (isRepeating(b) ? 1 : 0) || a.s - b.s || a.e - b.e);
 const minLabel = m => { const h = Math.floor(m / 60) % 24, mm = m % 60; const ap = h < 12 ? 'a' : 'p'; const hh = h % 12 || 12; return hh + ':' + pad(mm) + ap; };
+const evTimeLabel = ev => isAllDay(ev) ? 'WHOLE DAY' : minLabel(ev.s) + '–' + minLabel(ev.e);
 
 /* ---------- quotas ----------
    A quota is a homework/milestone checklist item pinned to one date. It is

@@ -41,8 +41,9 @@ function renderCal() {
         const ordered = calOrder(eventsOn(ds));
         ordered.slice(0, max).forEach(ev => {
           const e = div('ev');
-          e.innerHTML = '<span class="tm">' + minLabel(ev.s) + ' </span>' + esc(ev.title);   // phones hide the time — the title matters more
-          e.style.background = isRepeating(ev) ? C_EVENT : C_ONEOFF;
+          e.innerHTML = (isAllDay(ev) ? '' : '<span class="tm">' + minLabel(ev.s) + ' </span>') + esc(ev.title);   // phones hide the time — the title matters more
+          e.style.background = evColor(ev);
+          e.style.color = evInk(ev);
           e.dataset.ev = ev.id;
           cell.appendChild(e);
         });
@@ -166,11 +167,11 @@ function renderAgenda() {
   if (!ev) { a.appendChild(div('hint', 'Nothing coming up.')); }
   else {
     const r = div('agrow'); r.dataset.ev = ev.id; r.dataset.on = ev.on;
-    const dot = div('dot'); dot.style.background = isRepeating(ev) ? C_EVENT : C_ONEOFF;
+    const dot = div('dot'); dot.style.background = evColor(ev);
     const w = div('w');
     const when = ev.date === t ? 'TODAY' : ev.date === shiftD(t, 1) ? 'TOMORROW' : prettyD(ev.date);
     w.innerHTML = '<b>' + esc(ev.title) + (isRepeating(ev) ? ' <span style="opacity:.5;font-size:10px">↻</span>' : '') + '</b>' +
-      '<span>' + when + '  ·  ' + minLabel(ev.s) + '–' + minLabel(ev.e) + '</span>';
+      '<span>' + when + '  ·  ' + evTimeLabel(ev) + '</span>';
     r.appendChild(dot); r.appendChild(w);
     a.appendChild(r);
   }
@@ -232,7 +233,7 @@ function openEventEditor(id, dateDefault, onDate) {
   const ev = id ? S.events.find(e => e.id === id) : null;
   const ds = ev ? ev.date : (dateDefault || cur);
   const occ = onDate || ds;   // which occurrence was clicked, for repeating events
-  const rep = ev ? (ev.rep || 'none') : 'none';
+  const rep = ev ? (isAllDay(ev) ? 'allday' : (ev.rep || 'none')) : 'none';
   /* An occurrence that has already happened is part of the record. Only the
      note stays editable — and a note is one field shared by the whole series,
      which is a deliberate simplification. */
@@ -244,14 +245,15 @@ function openEventEditor(id, dateDefault, onDate) {
     '<div class="field"><label>TITLE</label><input class="inp' + cls + '" id="eT" ' + (sealed ? '' : 'data-autofocus ') + 'value="' + esc(ev ? ev.title : '') + '" placeholder="Standup / 1:1 / dentist…"' + ro + '></div>' +
     (sealed ? '' :
       '<div class="field"><label>' + (isRepeating(ev) ? 'FIRST DATE' : 'DATE') + '</label><input class="inp" type="date" id="eD" value="' + ds + '"></div>' +
-      '<div class="two"><div class="field"><label>START</label><select class="inp" id="eS">' + minOptions(ev ? ev.s : 540) + '</select></div>' +
-      '<div class="field"><label>END</label><select class="inp" id="eE">' + minOptions(ev ? ev.e : 600) + '</select></div></div>' +
+      '<div class="two"><div class="field"><label>START</label><select class="inp" id="eS"' + (rep === 'allday' ? ' disabled' : '') + '>' + minOptions(ev && !isAllDay(ev) ? ev.s : 540) + '</select></div>' +
+      '<div class="field"><label>END</label><select class="inp" id="eE"' + (rep === 'allday' ? ' disabled' : '') + '>' + minOptions(ev && !isAllDay(ev) ? ev.e : 600) + '</select></div></div>' +
       '<div class="field"><label>REPEAT</label><select class="inp" id="eR">' +
       REPEATS.map(r => '<option value="' + r.id + '"' + (r.id === rep ? ' selected' : '') + '>' + r.name + '</option>').join('') +
+      '<option value="allday"' + (rep === 'allday' ? ' selected' : '') + '>Whole day</option>' +
       '</select></div>' +
-      '<div class="field" id="untilWrap"' + (rep === 'none' ? ' hidden' : '') + '><label>REPEAT UNTIL  (blank = forever)</label>' +
+      '<div class="field" id="untilWrap"' + (rep === 'none' || rep === 'allday' ? ' hidden' : '') + '><label>REPEAT UNTIL  (blank = forever)</label>' +
       '<input class="inp" type="date" id="eU" value="' + (ev && ev.until ? ev.until : '') + '"></div>') +
-    (sealed ? '<div class="field"><label>WHEN</label><input class="inp ro" value="' + esc(prettyD(occ) + '  ·  ' + minLabel(ev.s) + '–' + minLabel(ev.e)) + '" readonly></div>' : '') +
+    (sealed ? '<div class="field"><label>WHEN</label><input class="inp ro" value="' + esc(prettyD(occ) + '  ·  ' + evTimeLabel(ev)) + '" readonly></div>' : '') +
     '<div class="field"><label>NOTE' + (sealed ? '  (the one field you can still change)' : '') + '</label>' +
     '<textarea class="inp" id="eN" placeholder="link, room, agenda…">' + esc(ev ? ev.note : '') + '</textarea></div>' +
     (sealed ? '<div class="hint" style="margin-bottom:8px">' + prettyD(occ) + ' has passed, so the time and title are fixed. Editing the note changes it on every occurrence of this event.</div>'
@@ -266,7 +268,12 @@ function openEventEditor(id, dateDefault, onDate) {
   );
   const M = $('#modal');
   const rsel = M.querySelector('#eR');
-  if (rsel) rsel.onchange = () => { M.querySelector('#untilWrap').hidden = rsel.value === 'none'; };
+  /* "Whole day" greys out START/END — the event has no times */
+  const syncRep = () => {
+    M.querySelector('#untilWrap').hidden = rsel.value === 'none' || rsel.value === 'allday';
+    M.querySelector('#eS').disabled = M.querySelector('#eE').disabled = rsel.value === 'allday';
+  };
+  if (rsel) rsel.onchange = syncRep;
 
   const sk = M.querySelector('[data-skip]');
   if (sk) sk.onclick = () => {
@@ -291,9 +298,10 @@ function openEventEditor(id, dateDefault, onDate) {
     if (sealed) { pushUndo(); ev.note = note; save(); closeModal(); renderAll(); sfx('place'); return; }
     const title = M.querySelector('#eT').value.trim() || 'Event';
     const date = M.querySelector('#eD').value || ds;
-    let s = +M.querySelector('#eS').value, e = +M.querySelector('#eE').value;
+    const allDay = M.querySelector('#eR').value === 'allday';
+    let s = allDay ? 0 : +M.querySelector('#eS').value, e = allDay ? 1440 : +M.querySelector('#eE').value;
     if (e <= s) e = Math.min(1440, s + 15);
-    const repv = M.querySelector('#eR').value;
+    const repv = allDay ? 'none' : M.querySelector('#eR').value;
     const until = repv === 'none' ? null : (M.querySelector('#eU').value || null);
     /* A time or title change on a repeating event is ambiguous — every
        occurrence, or just this one going forward? Ask, unless occ is the
@@ -302,14 +310,14 @@ function openEventEditor(id, dateDefault, onDate) {
        change (nothing else different) keeps applying to the whole series
        without asking — that's the one deliberate simplification kept from
        before, and it's called out in the hint above the NOTE field. */
-    if (ev && isRepeating(ev) && occ !== ev.date && (title !== ev.title || s !== ev.s || e !== ev.e)) {
+    if (ev && isRepeating(ev) && occ !== ev.date && (title !== ev.title || s !== ev.s || e !== ev.e || allDay)) {
       closeModal();
-      openScopeChoice(ev, occ, { title, s, e, note, repv, until });
+      openScopeChoice(ev, occ, { title, s, e, note, repv, until, allDay });
       return;
     }
     pushUndo();
-    if (ev) Object.assign(ev, { title, date, s, e, note: note, rep: repv, until: until });
-    else S.events.push({ id: uid(), title, date, s, e, note: note, rep: repv, until: until, skip: [] });
+    if (ev) Object.assign(ev, { title, date, s, e, note: note, rep: repv, until: until, allDay: allDay });
+    else S.events.push({ id: uid(), title, date, s, e, note: note, rep: repv, until: until, skip: [], allDay: allDay });
     syncAllEventBlocks();
     save(); closeModal(); renderAll(); sfx('place');
   };
@@ -349,7 +357,7 @@ function openScopeChoice(ev, occ, edits) {
   M.querySelector('[data-scope="one"]').onclick = () => {
     pushUndo();
     ev.skip = (ev.skip || []).concat([occ]);
-    S.events.push({ id: uid(), title: edits.title, date: occ, s: edits.s, e: edits.e, note: edits.note, rep: 'none', until: null, skip: [] });
+    S.events.push({ id: uid(), title: edits.title, date: occ, s: edits.s, e: edits.e, note: edits.note, rep: 'none', until: null, skip: [], allDay: !!edits.allDay });
     syncAllEventBlocks();
     save(); closeModal(); renderAll(); sfx('place');
     toast('Changed just ' + prettyD(occ));
@@ -360,7 +368,7 @@ function openScopeChoice(ev, occ, edits) {
     const carriedSkips = (ev.skip || []).filter(d => d >= occ);
     ev.skip = (ev.skip || []).filter(d => d < occ);
     ev.until = (ev.until && ev.until < cutoff) ? ev.until : cutoff;
-    S.events.push({ id: uid(), title: edits.title, date: occ, s: edits.s, e: edits.e, note: edits.note, rep: edits.repv, until: edits.until, skip: carriedSkips });
+    S.events.push({ id: uid(), title: edits.title, date: occ, s: edits.s, e: edits.e, note: edits.note, rep: edits.repv, until: edits.until, skip: edits.allDay ? [] : carriedSkips, allDay: !!edits.allDay });
     syncAllEventBlocks();
     save(); closeModal(); renderAll(); sfx('place');
     toast('Changed ' + prettyD(occ) + ' onward — earlier days kept');
@@ -375,7 +383,7 @@ function openDayPanel(ds) {
     '<div class="li" style="margin-top:6px"><span>Rank</span><span class="amt" style="color:var(--mult)">' + dayRank(d).toFixed(1) + ' / 10</span></div>' +
     '<div class="li" style="margin-top:6px"><span class="goldtxt">Gold</span><span class="amt">' + (gradedSlots(d) ? dayGold(d).toLocaleString() : '—') + '</span></div>' +
     '<div class="field" style="margin-top:14px"><label>EVENTS</label><div class="tlist" id="evList">' +
-    (evs.length ? calOrder(evs).map(e => '<div class="trow click" data-ev="' + e.id + '"><span class="dot" style="width:12px;height:12px;border-radius:4px;border:2px solid #000;background:' + (isRepeating(e) ? C_EVENT : C_ONEOFF) + '"></span><span class="w">' + esc(e.title) + (isRepeating(e) ? ' ↻' : '') + '</span><small>' + minLabel(e.s) + '–' + minLabel(e.e) + '</small></div>').join('') : '<div class="hint">No events this day.</div>') +
+    (evs.length ? calOrder(evs).map(e => '<div class="trow click" data-ev="' + e.id + '"><span class="dot" style="width:12px;height:12px;border-radius:4px;border:2px solid #000;background:' + evColor(e) + '"></span><span class="w">' + esc(e.title) + (isRepeating(e) ? ' ↻' : '') + '</span><small>' + evTimeLabel(e) + '</small></div>').join('') : '<div class="hint">No events this day.</div>') +
     '</div></div>' +
     '<div class="modrow"><button class="btn sm gold" data-add>+ EVENT</button>' +
     '<button class="btn sm blue" data-open>OPEN IN DAY VIEW</button>' +
@@ -406,9 +414,10 @@ function mergeBlocksFreeSpace(srcDs, dstDs) {
   const dst = getDay(dstDs);
   const occ = occupancy(dst, true, dstDs);
   let n = 0;
-  taskBlocks(src).slice().sort((a, b) => a.start - b.start).forEach(b => {
+  /* NEGATIVE blocks are a record of time wasted, not a plan — never copied */
+  taskBlocks(src).filter(b => !isNeg(b)).sort((a, b) => a.start - b.start).forEach(b => {
     let run = null;
-    const flush = () => { if (run) { dst.blocks.push({ id: uid(), start: run.s, len: run.l, taskId: b.taskId, note: b.note, done: false, grade: null }); n++; run = null; } };
+    const flush = () => { if (run) { dst.blocks.push({ id: uid(), start: run.s, len: run.l, taskId: b.taskId, done: false, grade: null }); n++; run = null; } };
     for (let i = b.start; i < b.start + b.len && i < SLOTS; i++) {
       if (!occ[i]) { if (!run) run = { s: i, l: 0 }; run.l++; occ[i] = 'new'; }
       else flush();
@@ -866,8 +875,8 @@ function openMenu() {
     '<div class="field"><label>ALERTS</label>' +
     '<div class="li"><span>' + (typeof Notification === 'undefined' ? 'This browser has no desktop notifications'
       : Notification.permission === 'granted' ? '● desktop alerts on'
-      : Notification.permission === 'denied' ? 'Desktop alerts blocked — Baron pops its own card instead'
-      : 'Desktop alerts not enabled yet — Baron pops its own card instead') + '</span></div>' +
+      : Notification.permission === 'denied' ? 'Desktop alerts blocked'
+      : 'Desktop alerts not enabled yet') + '</span></div>' +
     '<div class="hint" style="margin-top:8px">Every block and event gets a chime ' + ALERT_LEAD + ' minutes before it starts. This ignores the ♪ mute, and only works while Baron is open in a tab.</div>' +
     (typeof Notification !== 'undefined' && Notification.permission === 'default'
       ? '<div class="modrow" style="margin-top:9px"><button class="btn sm green" data-notify>ENABLE DESKTOP ALERTS</button></div>' : '') +
@@ -893,7 +902,7 @@ function openHelp() {
     ['1 – 5 in the grade card', 'pick a grade'],
     ['TODAY button', 'jump back to today'],
     ['past days', 'read-only archive'],
-    ['B', 'new block'], ['N', 'jump to now'], ['T / C / K', 'daily / calendar / tasks'], ['Q', 'calendar, showing quotas'], ['S', 'recap today (→ SEE ALL STATS)'],
+    ['B', 'new block'], ['N', 'jump to now'], ['D / C / T', 'daily / calendar / tasks'], ['Q', 'calendar, showing quotas'], ['S', 'recap today (→ SEE ALL STATS)'],
     ['← →', 'previous / next day'], ['Ctrl+Z', 'undo'], ['Esc', 'close']
   ];
   openModal(
@@ -904,6 +913,7 @@ function openHelp() {
     GRADES.map(g => '<b style="color:' + g.color + '">' + g.g + '</b> ' + g.pts + '%').join(' · ') +
     '. Anything still ungraded when the day ends is stamped <b style="color:' + AUTO.color + '">U</b> ' + AUTO.pts +
     '% and the day is sealed — past blocks and events can no longer be added, changed or deleted. ' +
+    'Save a block without picking a task and it becomes a <b>NEGATIVE</b> block, stamped <b style="color:' + NEG.color + '">N</b> ' + NEG.pts + '% for good — for time you actively wasted. ' +
     'Three numbers come out of that:<br>' +
     '<b style="color:#0093ff">SCORE / 100</b> — how well you did what you booked, weighted by block length. Ungraded time counts as zero, so it stays honest.<br>' +
     '<b style="color:#e2564c">RANK / 10</b> — how full your working day was. Time that counted ÷ the window between <b style="color:#9a5bd6">SOD</b> and <b style="color:#9a5bd6">EOD</b>, × 10. That window is 9:00a–10:00p unless blocks reach past either edge. <b>F</b> and <b>U</b> hand all their time back, <b>D</b> hands back half — so a day you slept through ranks near zero however much you booked.<br>' +
@@ -928,12 +938,12 @@ function notifyReady() {
   return typeof Notification !== 'undefined' && Notification.permission === 'granted';
 }
 function askNotify() {
-  if (typeof Notification === 'undefined') { toast('This browser has no notifications — Baron will pop its own'); return; }
+  if (typeof Notification === 'undefined') { toast('This browser has no notifications'); return; }
   if (Notification.permission === 'granted') { toast('Alerts are already on'); return; }
   Notification.requestPermission().then(p => {
-    toast(p === 'granted' ? 'Desktop alerts on' : 'Desktop alerts blocked — Baron will pop its own instead');
+    toast(p === 'granted' ? 'Desktop alerts on' : 'Desktop alerts blocked');
     renderAll();
-  }).catch(() => toast('Desktop alerts unavailable here'));
+  }).catch(() => toast('Desktop alerts unavailable'));
 }
 
 /* a chime that ignores the mute toggle */
@@ -1063,11 +1073,11 @@ function bind() {
     }
     if (!$('#scrim').hidden) return;
     const k = e.key.toLowerCase();
-    if (k === 't') switchView('day');
+    if (k === 'd') switchView('day');
     else if (k === 'q') { calMode = 'quotas'; switchView('cal'); }
     else if (k === 'c') { calMode = 'events'; switchView('cal'); }
     else if (k === 's') showRecap();
-    else if (k === 'k') switchView('tasks');
+    else if (k === 't') switchView('tasks');
     else if (k === 'n') { goDay(todayStr()); scrollToNow(true); }
     else if (k === 'b') { const s = cur === todayStr() ? Math.floor(nowSlotFloat()) : 36; openBlockEditor(null, clamp(s, 0, 92), 4); }
     else if (k === '?') openHelp();

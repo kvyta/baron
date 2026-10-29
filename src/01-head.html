@@ -238,11 +238,21 @@ button{font-family:inherit}
   border:3px solid var(--ink);color:#fff;box-shadow:0 3px 0 rgba(0,0,0,.35);
 }
 .blk.tiny .grade{font-size:17px;border-width:2px;padding:0 6px 1px}
-.blk .note{font-size:11.5px;font-weight:600;line-height:1.3;opacity:.72;margin-top:3px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
+/* NEGATIVE block — Balatro's Negative edition: inverted, high contrast, see-through */
+.blk.neg,.blk.neg.done{
+  background:rgba(14,6,34,.66);color:#fff;border:3px solid #fff;text-shadow:0 1px 0 #000;
+  -webkit-backdrop-filter:invert(1) hue-rotate(180deg);backdrop-filter:invert(1) hue-rotate(180deg);
+  box-shadow:0 0 0 2px #000, 0 3px 0 2px rgba(0,0,0,.5);
+}
+.blk.neg::before{background:#fff}
+.blk.neg .t{text-decoration:none;opacity:1;letter-spacing:2px;font-family:var(--f-disp)}
+.blk.neg .s{opacity:.85}
+.blk.neg .grade{background:#000;color:#fff;border-color:#fff;box-shadow:0 0 0 2px #000,0 3px 0 2px rgba(0,0,0,.4)}
+.neghint{margin:-4px 0 10px;padding:8px 10px;border:2px dashed #fff;border-radius:8px;background:rgba(0,0,0,.45);color:#fff}
+.btn.negbtn{background:#000;color:#fff;box-shadow:0 0 0 2px #fff}
 .blk.evt{background:var(--event);color:#fff}
 .blk.evt::before{background:rgba(0,0,0,.35)}
 .blk.evt .s{opacity:.85}
-.blk.evt .note{opacity:.9}
 .blk .evtagt{
   position:absolute;right:5px;top:4px;font-size:9px;font-weight:900;letter-spacing:1.3px;
   padding:2px 7px;border-radius:6px;border:2px solid var(--ink);background:rgba(0,0,0,.32);color:#fff;
@@ -293,6 +303,8 @@ button{font-family:inherit}
 .ttrow{display:flex;align-items:center;justify-content:space-between;gap:6px;background:var(--chip);color:#fff;border:2px solid var(--ink);border-radius:7px;padding:5px 7px;font-size:11px;font-weight:800;line-height:1.25}
 .ttrow .amt{flex:0 0 auto;font-size:10px;opacity:.85}
 .ttrow.evt{background:var(--event)}
+.ttrow.allday{background:var(--gold);color:#3a2c00}
+select.inp:disabled{opacity:.4;cursor:not-allowed;filter:grayscale(1)}
 
 /* ============ shared segmented control + list-panel chrome ============
    .segwrap/.seg are used by TASKS and STATS' filter rows; .listwrap/.list

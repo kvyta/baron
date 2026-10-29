@@ -11,7 +11,8 @@
      "unpulled" under the old manual-pull system into a real event-block, and
      persist it immediately so this isn't just an in-memory patch that has to
      be recomputed every boot. */
-  if (syncAllEventBlocks()) save();
+  if (syncAllEventBlocks() | adoptDirty) save();   // `|` not `||`: always sync
+  adoptDirty = false;
   refreshStreak();
   cur = todayStr();
   bind();

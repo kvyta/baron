@@ -63,7 +63,7 @@ function mergePriority(Pri, Oth) {
   });
   /* events */
   const eRemap = {}, eId = {}, eSig = {};
-  const sig = e => [key(e.title), e.date, e.s, e.e, e.rep || 'none'].join('|');
+  const sig = e => [key(e.title), e.date, e.s, e.e, e.rep || 'none', e.allDay ? 'allday' : ''].join('|');
   const keepEv = e => { const c = Object.assign({}, e, { skip: (e.skip || []).slice() }); out.events.push(c); eId[c.id] = c; eSig[sig(c)] = c; return c; };
   (Pri.events || []).forEach(keepEv);
   (Oth.events || []).forEach(e => {

@@ -148,12 +148,20 @@ function renderDay() {
    — nothing here is clickable/editable. */
 function renderDayStats() {
   const t = todayStr();
-  renderDnList('dnTodayList', doneEventBreakdownOn(t), doneTaskBreakdownOn(t));
+  renderDnList('dnTodayList', doneEventBreakdownOn(t), doneTaskBreakdownOn(t), eventsOn(t).filter(isAllDay));
   renderDnList('dnWeekList', doneEventBreakdownWeek(t), doneTaskBreakdownWeek(t));
 }
-function renderDnList(id, evRows, taskRows) {
+function renderDnList(id, evRows, taskRows, allDay) {
   const L = $('#' + id); L.innerHTML = '';
-  if (!evRows.length && !taskRows.length) { L.appendChild(div('dnempty', 'nothing here yet')); return; }
+  allDay = allDay || [];
+  if (!allDay.length && !evRows.length && !taskRows.length) { L.appendChild(div('dnempty', 'nothing here yet')); return; }
+  /* whole-day events (gold) sit above everything, title only — no time,
+     since they book none and count toward nothing */
+  allDay.forEach(ev => {
+    const row = div('ttrow allday');
+    row.innerHTML = '<span class="nm">' + esc(ev.title) + '</span>';
+    L.appendChild(row);
+  });
   evRows.forEach(r => {
     const row = div('ttrow evt');
     row.innerHTML = '<span class="nm">' + esc(r.title) + '</span><span class="amt">' + durLabel(r.slots) + '</span>';
@@ -247,19 +255,17 @@ function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ 
 function blockEl(b, isNow) {
   const ev = isEvent(b);
   const sealed = isPastDay(cur);
-  const el = div('blk' + (b.len < 2 ? ' tiny' : '') + (!ev && b.done ? ' done' : '') + (isNow ? ' now' : '') + (ev ? ' evt' : '') + (sealed ? ' locked' : ''));
+  const el = div('blk' + (b.len < 2 ? ' tiny' : '') + (!ev && b.done ? ' done' : '') + (isNow ? ' now' : '') + (ev ? ' evt' : '') + (isNeg(b) ? ' neg' : '') + (sealed ? ' locked' : ''));
   el.style.gridRow = (b.start + 1) + ' / span ' + b.len;
   el.style.setProperty('--c', ev ? C_EVENT : C_BLOCK);
   el.dataset.id = b.id;
   el.appendChild(div('t', taskLabel(b)));
-  el.appendChild(div('s', rangeLabel(b.start, b.len)));
-  /* the note earns a line of its own once the block is tall enough to hold it */
-  if (b.note && b.len >= 3) el.appendChild(div('note', b.note));
+  el.appendChild(div('s', slotLabel(b.start) + '–' + slotLabel(b.start + b.len)));
   if (ev) {
     el.appendChild(div('evtagt', 'EVENT'));
   } else if (b.done) {
     const gr = div('grade outline', b.grade);
-    gr.style.background = colOf(b.grade);
+    if (!isNeg(b)) gr.style.background = colOf(b.grade);   // N styles itself (.blk.neg .grade)
     if (!sealed) gr.dataset.act = 'tick';
     el.appendChild(gr);
   } else {
@@ -394,7 +400,8 @@ function timeOptions(sel, from, to) {
 function taskOptions(sel) {
   const list = S.tasks.filter(t => !t.hidden || t.id === sel);
   let o = '';
-  if (!sel) o += '<option value="" selected disabled>— pick a task —</option>';
+  /* leaving this alone is a choice: no task = a NEGATIVE block */
+  o += '<option value=""' + (!sel ? ' selected' : '') + '>— No task —</option>';
   o += list.map(t => '<option value="' + t.id + '"' + (t.id === sel ? ' selected' : '') + '>' + esc(t.name) + (t.hidden ? '  (hidden)' : '') + '</option>').join('');
   o += '<option value="__new">＋ Create new task…</option>';
   return o;
@@ -405,16 +412,18 @@ function openBlockEditor(id, start, len) {
   if (b && isEvent(b)) { openTodayEvent(b); return; }
   if (isPastDay(cur)) { if (b) openArchivedBlock(b); else toast('Past days are archived'); return; }
   const st = b ? b.start : start, ln = b ? b.len : (len || 4);
-  const sel = b ? b.taskId : (S.tasks.filter(t => !t.hidden).length === 1 ? S.tasks.filter(t => !t.hidden)[0].id : '');
+  /* nothing is preselected for a new block — never picking a task is how a
+     NEGATIVE block is made, so a lone task can't be filled in for you */
+  const sel = b && !isNeg(b) ? b.taskId : '';
   openModal(
     '<h3>' + (b ? '✎ EDIT BLOCK' : '★ NEW BLOCK') + '<button class="btn sm x" data-x>✕</button></h3>' +
     '<div class="field"><label>TASK</label><select class="inp" id="fT">' + taskOptions(sel) + '</select></div>' +
     '<div class="field" id="newWrap" hidden><label>NEW TASK NAME</label><input class="inp" id="fNew" placeholder="e.g. Deep work"></div>' +
+    '<div class="hint neghint" id="negHint" hidden>Selecting this creates a <b>NEGATIVE</b> block, stamped <b>N</b>, which is worse than an F.</div>' +
     '<div class="two"><div class="field"><label>START</label><select class="inp" id="fS">' + timeOptions(st, 0, 95) + '</select></div>' +
     '<div class="field"><label>END</label><select class="inp" id="fE">' + timeOptions(st + ln, 1, 96) + '</select></div></div>' +
-    '<div class="field"><label>NOTE  (shown on the block)</label><textarea class="inp" id="fN" placeholder="what exactly, this time">' + esc(b ? b.note : '') + '</textarea></div>' +
     '<div class="modrow">' + (b ? '<button class="btn red" data-del>DELETE</button>' : '') +
-    (b && b.done ? '<button class="btn" data-undone>UNGRADE</button>' : '') +
+    (b && b.done && !isNeg(b) ? '<button class="btn" data-undone>UNGRADE</button>' : '') +
     '<div class="spacer"></div><button class="btn green" data-save>' + (b ? 'SAVE' : 'ADD BLOCK') + '</button></div>'
   );
   const M = $('#modal');
@@ -422,10 +431,12 @@ function openBlockEditor(id, start, len) {
   const syncNew = () => {
     const isNew = selEl.value === '__new';
     newWrap.hidden = !isNew;
+    M.querySelector('#negHint').hidden = selEl.value !== '';
+    M.querySelector('[data-save]').classList.toggle('negbtn', selEl.value === '');
     if (isNew) setTimeout(() => newEl.focus(), 30);
   };
   selEl.onchange = syncNew;
-  if (!S.tasks.filter(t => !t.hidden).length) { selEl.value = '__new'; syncNew(); }
+  syncNew();
   M.querySelector('#fS').addEventListener('change', () => {
     const s2 = +M.querySelector('#fS').value, e2 = +M.querySelector('#fE').value;
     if (e2 <= s2) M.querySelector('#fE').value = String(Math.min(96, s2 + 1));
@@ -437,22 +448,24 @@ function openBlockEditor(id, start, len) {
       if (!nm) { toast('Give the new task a name'); newEl.focus(); return; }
       pushUndo();
       taskId = addTask(nm).id;
-    } else if (!taskId) { toast('Pick a task first'); return; }
-    else pushUndo();
+    } else pushUndo();
+    const neg = !taskId;
     const s2 = +M.querySelector('#fS').value;
     let e2 = +M.querySelector('#fE').value;
     if (e2 <= s2) e2 = s2 + 1;
-    const note = M.querySelector('#fN').value;
     const d = getDay(cur);
     if (b) {
       d.blocks = d.blocks.filter(x => x.id !== b.id);
       carve(d, s2, e2);
-      Object.assign(b, { start: s2, len: e2 - s2, taskId: taskId, note: note });
+      Object.assign(b, { start: s2, len: e2 - s2 });
+      if (neg) { delete b.taskId; delete b.auto; Object.assign(b, { neg: true, done: true, grade: 'N' }); }
+      else if (isNeg(b)) { delete b.neg; Object.assign(b, { taskId: taskId, done: false, grade: null }); }   // turned back into a real task block — needs a real grade
+      else b.taskId = taskId;
       d.blocks.push(b); d.blocks.sort((x, y) => x.start - y.start);
     } else {
-      addBlock(cur, s2, e2 - s2, taskId, note);
+      addBlock(cur, s2, e2 - s2, taskId);
     }
-    save(); closeModal(); renderAll(); sfx('place');
+    save(); closeModal(); renderAll(); sfx(neg ? 'fail' : 'place');
   };
   M.querySelector('[data-save]').onclick = commit;
   if (newEl) newEl.addEventListener('keydown', e => { if (e.key === 'Enter') commit(); });
@@ -470,7 +483,6 @@ function openArchivedBlock(b) {
     '<h3>🔒 ARCHIVED<button class="btn sm x" data-x>✕</button></h3>' +
     '<div class="field"><label>TASK</label><input class="inp ro" value="' + esc(taskLabel(b)) + '" readonly></div>' +
     '<div class="field"><label>WHEN</label><input class="inp ro" value="' + esc(rangeLabel(b.start, b.len)) + '" readonly></div>' +
-    (b.note ? '<div class="field"><label>NOTE</label><textarea class="inp ro" readonly>' + esc(b.note) + '</textarea></div>' : '') +
     '<div class="li"><span>Grade</span><span class="amt" style="color:' + g.color + '">' + g.g + ' — ' + g.label + '</span></div>' +
     '<div class="li" style="margin-top:6px"><span>Counts toward the day at</span><span class="amt">' + g.pts + '%</span></div>' +
     '<div class="hint" style="margin-top:10px">' + prettyD(cur) + ' is over, so this is a record now — grades, times and notes are fixed. Today is still fully editable, even hours that have already passed.</div>' +
@@ -534,6 +546,7 @@ function openGrade(id) {
 let gradeKeys = null;
 
 function applyGrade(b, g) {
+  if (isNeg(b)) return;   // N is permanent
   pushUndo();
   b.done = true; b.grade = g;
   save(); closeModal(); gradeKeys = null;
