@@ -2,8 +2,8 @@
    Network first for the app itself (so a new deploy shows up on the next
    open), falling back to the cached copy when there's no signal. Cloud
    sync requests (Supabase) are never cached. */
-const CACHE = 'baron-v1';
-const SHELL = ['baron.html', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
+const CACHE = 'baron-v2';   // bumped: new icons
+const SHELL = ['baron.html', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png', 'icons/favicon.ico', 'icons/favicon-32.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
